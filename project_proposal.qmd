@@ -1,0 +1,11 @@
+---
+title: "Project Proposal"
+subtitle: "DATA 403"
+authors: "Daniel Alvarez, James Irwin, Libby Brill"
+format: pdf
+---
+
+```{r}
+source("data_cleaning.R")
+```
+
