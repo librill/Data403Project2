@@ -1,0 +1,46 @@
+---
+title: "scratch"
+output: html_document
+date: "2025-10-24"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r cars}
+credit <- read_csv(here::here("Data", "application_train.csv"))
+head(credit)
+```
+
+LIST OF VARIABLES:
+
+- SK_ID_CURR
+- TARGET
+- NAME_CONTRACT_TYPE
+  -> CONTRACT_TYPE_CASH
+  -> CONTRACT_TYPE_REVOLVING
+- FLAG_OWN_CAR
+- FLAG_OWN_REALTY
+- CNT_CHILDREN
+- AMT_INCOME_TOTAL
+- AMT_CREDIT
+- AMT_ANNUITY
+- AMT_GOODS_PRICE
+- NAME_INCOME_TYPE? 
+- NAME_EDUCATION_TYPE
+  -> EDUCATION_TYPE_SECONDARY
+  -> EDUCATION_TYPE_HIGHER
+  -> EDUCATION_TYPE_OTHER
+- NAME_FAMILY_STATUS
+  -> FAMILY_STATUS_MARRIED
+  -> FAMILY_STATUS_SINGLE
+  -> FAMILY_STATUS_OTHER
+- NAME_HOUSING_TYPE
+  -> HOUSING_TYPE_OWN (house / apartment)
+  -> HOUSING_TYPE_PARENTS
+  -> HOUSING_TYPE_OTHER
+- DAYS_EMPLOYED (current job - proxy for age?)
+- DOCUMENTS_FLAGGED (aggregate of FLAG_DOCUMENT 2-21)
+
+
