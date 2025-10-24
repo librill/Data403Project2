@@ -1,11 +1,26 @@
 ---
-title: "Project Proposal"
+title: "Home Credit Project Proposal"
 subtitle: "DATA 403"
 authors: "Daniel Alvarez, James Irwin, Libby Brill"
-format: pdf
+format:
+  pdf:
+    execute:
+      echo: false
+      message: false
+      warning: false
 ---
 
 ```{r}
 source("data_cleaning.R")
 ```
+
+## The Data
+
+```{r}
+# visualizations
+```
+
+## Models and Metrics
+
+## Conclusion
 
