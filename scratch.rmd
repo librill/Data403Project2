@@ -95,4 +95,35 @@ LIST OF (new) VARIABLES:
 - DAYS_EMPLOYED (current job - proxy for age?)
 - DOCUMENTS_FLAGGED (aggregate of FLAG_DOCUMENT 2-21)
 
+```{r}
+credit %>%
+  group_by(CNT_CHILDREN) |>
+  summarise(default_rate = mean(TARGET)) |>
+  ggplot(aes(x=factor(CNT_CHILDREN), y=default_rate, fill = factor(CNT_CHILDREN))) +
+  geom_col() +
+  labs(title="Default Rate by Number of Children",
+       x = "Number of Children",
+       y = "Default Rate")
+
+```
+
+```{r}
+credit |>
+  mutate(
+    Education = case_when(
+      EDUCATION_TYPE_HIGHER == 1 ~ "Higher",
+      EDUCATION_TYPE_SECONDARY == 1 ~ "Secondary",
+      TRUE ~ "Other"
+    )
+  ) |>
+  group_by(Education) |>
+  summarise(default_rate = mean(TARGET)) |>
+  ggplot(aes(x = Education, y = default_rate, fill = Education)) +
+  geom_col() +
+  labs(title = "Default Rate by Education Level",
+       y = "Default Rate") +
+  theme_minimal()
+
+```
+
 
