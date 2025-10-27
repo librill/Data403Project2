@@ -96,25 +96,26 @@ LIST OF (new) VARIABLES:
 - DOCUMENTS_FLAGGED (aggregate of FLAG_DOCUMENT 2-21)
 
 ```{r}
-credit %>%
+credit |>
   group_by(CNT_CHILDREN) |>
   summarise(default_rate = mean(TARGET)) |>
-  ggplot(aes(x=factor(CNT_CHILDREN), y=default_rate, fill = factor(CNT_CHILDREN))) +
+  ggplot(aes(x = factor(CNT_CHILDREN), y = default_rate, fill = factor(CNT_CHILDREN))) +
   geom_col() +
   labs(title="Default Rate by Number of Children",
        x = "Number of Children",
-       y = "Default Rate")
-
+       y = "Default Rate") +
+  theme_bw() +
+  theme(legend.position = "none")
 ```
 
 ```{r}
 credit |>
   mutate(
-    Education = case_when(
+    Education = factor(case_when(
       EDUCATION_TYPE_HIGHER == 1 ~ "Higher",
       EDUCATION_TYPE_SECONDARY == 1 ~ "Secondary",
       TRUE ~ "Other"
-    )
+    ), levels = c("Higher", "Secondary", "Other"))
   ) |>
   group_by(Education) |>
   summarise(default_rate = mean(TARGET)) |>
@@ -122,8 +123,8 @@ credit |>
   geom_col() +
   labs(title = "Default Rate by Education Level",
        y = "Default Rate") +
-  theme_minimal()
-
+  theme_bw() +
+  theme(legend.position = "none")
 ```
 
 
