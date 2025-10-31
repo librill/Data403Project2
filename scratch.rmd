@@ -151,4 +151,38 @@ plot_education
 ggsave("images/default_education.png", plot=plot_education, width = 10, height = 6)
 ```
 
+```{r}
 
+# function to determine nan values, given dataframe 
+# consumes dataframe, returns df of colnames and number nan
+
+# add percent nan function also
+count_nan <- function(df) {
+  nan_cols <- data.frame()
+  
+  for (i in 1:ncol(df)) {
+    name <- colnames(df[i])
+    num_nan <- sum(is.na(df[i]))
+    percent <- round(num_nan / ncol(df), 2)
+    nan_cols <- rbind(nan_cols, data.frame("column name" = name, "nan values" = num_nan, "percent nan" = percent))
+  }
+  
+  return(nan_cols)
+}
+```
+
+```{r}
+# critera: 
+# keep all columns with 0 N/A
+# all columns with <= 1% NA: drop those rows
+# other columns: remove from the model (too many NA)
+
+# QUESTION: can we make assumptions about WHY some values might be Nan? 
+
+```
+
+```{r}
+count_nan(all_credit)
+
+count_nan(credit)
+```
