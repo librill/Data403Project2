@@ -1,7 +1,7 @@
 ---
 title: "Home Credit Project Proposal"
 subtitle: "DATA 403"
-authors: "Daniel Alvarez, James Irwin, Libby Brill"
+authors: "Daniel Alvarez, Libby Brill, James Irwin"
 format:
   pdf:
     execute:
@@ -16,14 +16,20 @@ source("data_cleaning.R")
 
 # Data Summary
 
-We will use information from Home Credit, an international consumer finance provider based in Europe and Asia. Their “application_train.csv” table, which is part of the “application” dataset, is broken into a training and testing set. Our dataset consists of over 30,000 observations, each representing a loan that has been taken out. There is information about the loan and the loan applicant at the time it was filled, such as loan status, the applicant’s occupation, education level, and the size of their living area. The value of the response variable, “TARGET”, is a 1 if the client is known to have payment difficulties in the past, and a 0 represents any other case. To ensure Home Credit best predicts the ability of its clients to repay their loans, we will perform a number of tasks. For example, we plan to deal with missing values by encoding them as a 0 if appropriate, such as for the basement area or car age, as well as including a string if possible, like saying “unknown” for an applicant’s occupation type. We also plan to create new features that can condense our data as well as provide meaningful insight, such as collapsing income into categories (low income, medium, high), age into groups (applicants ages 20-30, 30-45, etc), as well as a variable for the living area size and age. Lastly, some valuable predictors we plan to use are age and gender (though we must proceed with caution), the type of loan taken out,  annuity, and whether the applicant owns property or not.
+To help Home Credit best predict whether potential clients will repay their loans,
+we will use an internal application dataset that consists of over 300,000 observations, 
+each representing a loan that has been taken out. There is information about the loan and the loan applicant at the time it was filled, such as loan status, the applicant’s occupation, education level, and the size of their living area. The value of the response variable, “TARGET”, is a 1 if the client is known to have payment difficulties in the past, and a 0 represents any other case. To ensure Home Credit best predicts the ability of its clients to repay their loans, we will perform a number of tasks. For example, we plan to deal with missing values by encoding them as a 0 if appropriate, such as for the basement area or car age, as well as including a string if possible, like saying “unknown” for an applicant’s occupation type. We also plan to create new features that can condense our data as well as provide meaningful insight, such as collapsing income (low income, medium, high) and age (20-30, 30-45, etc) into groups, as well as a variable for the living area size and age. Lastly, some valuable predictors we plan to use include the type of loan taken out, annuity, and whether the applicant owns property or not.
 
-***
-```{r}
-# visualizations
-# ***
-```
-***
+To quickly understand how default rate varies across different categories, we have 
+included several visualizations below: 
+
+![](images/default_children.png)
+![](images/default_education.png)
+
+As the visualizations make clear, default rate varies greatly among people
+with different numbers of children and different education levels. These are just
+two different attributes within the application dataset, so we feel confident that
+we will create a strong model when using all of the data. 
 
 # Models and Metrics
 

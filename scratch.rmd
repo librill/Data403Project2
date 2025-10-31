@@ -16,7 +16,14 @@ library(dplyr)
 ```{r cars}
 # load dataframe
 all_credit <- read_csv(here::here("Data", "application_train.csv"))
+```
 
+```{r}
+nrow(all_credit)
+```
+
+
+```{r}
 # aggregate documents flagged, one-hot-encode, and select columns, 
 credit <- all_credit %>% 
   mutate(
@@ -64,6 +71,9 @@ credit <- all_credit %>%
 
 head(credit)
 ```
+```{r}
+nrow(credit)
+```
 
 LIST OF (new) VARIABLES:
 
@@ -96,7 +106,7 @@ LIST OF (new) VARIABLES:
 - DOCUMENTS_FLAGGED (aggregate of FLAG_DOCUMENT 2-21)
 
 ```{r}
-credit |>
+plot_children <- credit |>
   group_by(CNT_CHILDREN) |>
   summarise(default_rate = mean(TARGET)) |>
   ggplot(aes(x = factor(CNT_CHILDREN), y = default_rate, fill = factor(CNT_CHILDREN))) +
@@ -106,10 +116,17 @@ credit |>
        y = "Default Rate") +
   theme_bw() +
   theme(legend.position = "none")
+
+plot_children
 ```
 
 ```{r}
-credit |>
+# save plot locally, dimensions chosen arbitrarily
+ggsave("images/default_children.png", plot=plot_children, width = 10, height = 6)
+```
+
+```{r}
+plot_education <- credit |>
   mutate(
     Education = factor(case_when(
       EDUCATION_TYPE_HIGHER == 1 ~ "Higher",
@@ -125,6 +142,13 @@ credit |>
        y = "Default Rate") +
   theme_bw() +
   theme(legend.position = "none")
+
+plot_education
+```
+
+```{r}
+# save plot locally, dimensions chosen arbitrarily
+ggsave("images/default_education.png", plot=plot_education, width = 10, height = 6)
 ```
 
 
