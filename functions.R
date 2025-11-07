@@ -72,7 +72,8 @@ cross_validation <- function(data, model, model_wkflow, num_splits, metric, no_c
       preds <- predict(model_fit, new_data = test_df, type = "raw")$x
     } else {
       # TODO for svc ...
-      preds <- predict(model_fit, new_data = test_df, type = "raw")
+      preds <- predict(model_fit, new_data = test_df, decision.values = TRUE)
+      print(preds)
     }
     
     #print(sum(preds>1))

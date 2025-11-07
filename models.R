@@ -2,7 +2,6 @@ library(tidyverse)
 library(tidymodels)
 library(discrim)
 # check, which one of these two?:
-library(LiblineaR)
 library(kernlab)
 
 source(here::here("data_cleaning.R"))
@@ -53,11 +52,11 @@ svc_rec_1 <- recipe(TARGET ~ ., data = credit) |>
 
 svc_mod <- svm_linear() |>
   set_mode("classification") |>
-  set_engine("kernlab", prob.model = TRUE) # check, not LiblineaR?
+  set_engine("kernlab", decision.values = TRUE)
 
 svc_wkflow <- workflow() |>
   add_model(svc_mod) |>
   add_recipe(svc_rec_1)
 
-cross_validation(data = credit, model = "svc", model_wkflow = svc_wkflow, num_splits = 5,
-                 metric = "accuracy", no_class = -1, bound = 0) # check, why error?
+# cross_validation(data = credit, model = "svc", model_wkflow = svc_wkflow, num_splits = 5,
+#                  metric = "accuracy", no_class = -1, bound = 0) # check, why error?
