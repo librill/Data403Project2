@@ -31,7 +31,7 @@ calc_metric <- function(observed, predicted, metric, no_class, bound) {
 }
 
 # y must be the last column
-cross_validation <- function(data, model_wkflow, num_splits, metric, no_class, bound) {
+cross_validation <- function(data, model, model_wkflow, num_splits, metric, no_class, bound) {
   set.seed(18938)
   df_cvs <- vfold_cv(data, v = num_splits)
   
@@ -45,10 +45,16 @@ cross_validation <- function(data, model_wkflow, num_splits, metric, no_class, b
       fit(train_df) |>
       extract_fit_parsnip()
     
-    preds <- predict(model_fit, new_data = test_df, type = "prob")$.pred_1
+    if (model == "logistic") {
+      preds <- predict(model_fit, new_data = test_df, type = "raw")
+    } else if (model == "lda") {
+      preds <- predict(model_fit, new_data = test_df, type = "raw")$x
+    } else {
+      # TODO for svc ...
+      preds <- predict(model_fit, new_data = test_df, type = "raw")
+    }
     
     split_metric <- calc_metric(test_df[[ncol(test_df)]], preds, metric, no_class, bound)
-    
     metric_total = metric_total + split_metric
   }
   

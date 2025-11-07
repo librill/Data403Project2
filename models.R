@@ -23,8 +23,8 @@ logit_wkflow <- workflow() |>
   add_model(logit_mod) |>
   add_recipe(lg_rec_1)
 
-cross_validation(data = credit, model_wkflow = logit_wkflow, num_splits = 5,
-                 metric = "accuracy", no_class = 0, bound = 0.5) # check, not 0?
+cross_validation(data = credit, model = "logistic", model_wkflow = logit_wkflow, num_splits = 5,
+                 metric = "accuracy", no_class = 0, bound = 0) 
 
 lda_rec_1 <- recipe(TARGET ~ ., data = credit) |>
   step_mutate(TARGET = factor(TARGET)) |>
@@ -38,8 +38,11 @@ lda_wkflow <- workflow() |>
   add_model(lda_mod) |>
   add_recipe(lda_rec_1)
 
-# cross_validation(data = credit, model_wkflow = lda_wkflow, num_splits = 5,
-#                  metric = "accuracy", no_class = 0, bound = 0) # check, why so small?
+# TODO: fix collinearity
+# TODO: create constants ...?
+
+cross_validation(data = credit, model = "lda", model_wkflow = lda_wkflow, num_splits = 5,
+                 metric = "accuracy", no_class = 0, bound = 0)
 
 svc_rec_1 <- recipe(TARGET ~ ., data = credit) |>
   step_mutate(TARGET = factor(if_else(TARGET == 0, -1, TARGET))) |>
@@ -53,5 +56,5 @@ svc_wkflow <- workflow() |>
   add_model(svc_mod) |>
   add_recipe(svc_rec_1)
 
-# cross_validation(data = credit, model_wkflow = svc_wkflow, num_splits = 5,
-#                  metric = "accuracy", no_class = -1, bound = 0) # check, why error?
+cross_validation(data = credit, model = "svc", model_wkflow = svc_wkflow, num_splits = 5,
+                 metric = "accuracy", no_class = -1, bound = 0) # check, why error?
