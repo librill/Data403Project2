@@ -1,31 +1,37 @@
-calc_metric <- function(observed, predicted, metric, no_class) {
+calc_metric <- function(observed, predicted, metric, no_class, bound) {
   
-  pred_class <- if_else(predicted > 0, 1, no_class)
-  TP <- sum(predicted == 1 & observed == "1")
-  TN <- sum(predicted == no_class & observed == no_class)
-  FP <- sum(predicted == 1 & observed == no_class)
-  FN <- sum(predicted == no_class, observed == 1)
+  pred_class <- if_else(predicted > bound, 1, no_class)
+  #observed <- as.numeric(as.character(observed))
   
-  print(TP)
+  TP <- sum(pred_class == 1 & observed == 1)
+  TN <- sum(pred_class == no_class & observed == no_class)
+  FP <- sum(pred_class == 1 & observed == no_class)
+  FN <- sum(pred_class == no_class & observed == 1)
   
   if (metric == "roc_auc") {
     # ***
   } else if (metric == "accuracy") {
-    result <- (TP + TN) / (TP + TN + FP + TN)
+    num <- TP + TN
+    denom <- TP + TN + FP + FN
   } else if (metric == "f1") {
-    result <- (2 * TP) / ((2 * TP) + FP + FN)
+    num <- 2 * TP
+    denom <- (2 * TP) + FP + FN
   } else if (metric == "recall") {
-    result <- TP / (TP + FN)
+    num <- TP
+    denom <- TP + FN
   } else {
-    print("not an available metric")
-    break
+    return ("not an available metric")
   }
   
-  return (result)
+  if (denom == 0) {
+    return ("denominator is 0")
+  }
+  
+  return (num / denom)
 }
 
 # y must be the last column
-cross_validation <- function(data, model_wkflow, num_splits, metric, no_class) {
+cross_validation <- function(data, model_wkflow, num_splits, metric, no_class, bound) {
   set.seed(18938)
   df_cvs <- vfold_cv(data, v = num_splits)
   
@@ -41,9 +47,7 @@ cross_validation <- function(data, model_wkflow, num_splits, metric, no_class) {
     
     preds <- predict(model_fit, new_data = test_df, type = "prob")$.pred_1
     
-    split_metric <- calc_metric(test_df[ncol(test_df)], preds, metric, no_class)
-    
-    print(split_metric)
+    split_metric <- calc_metric(test_df[[ncol(test_df)]], preds, metric, no_class, bound)
     
     metric_total = metric_total + split_metric
   }

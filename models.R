@@ -1,13 +1,18 @@
 library(tidyverse)
 library(tidymodels)
+library(discrim)
+# check, which one of these two?:
+library(LiblineaR)
+library(kernlab)
 
 source(here::here("data_cleaning.R"))
 source(here::here("functions.R"))
 
 credit <- credit |>
-  mutate(TARGET = factor(TARGET))
+  na.omit()
 
-rec_1 <- recipe(TARGET ~ ., data = credit) |>
+lg_rec_1 <- recipe(TARGET ~ ., data = credit) |>
+  step_mutate(TARGET = factor(TARGET)) |>
   step_dummy(all_nominal_predictors())
 
 logit_mod <- logistic_reg() |>
@@ -16,7 +21,37 @@ logit_mod <- logistic_reg() |>
 
 logit_wkflow <- workflow() |>
   add_model(logit_mod) |>
-  add_recipe(rec_1)
+  add_recipe(lg_rec_1)
 
 cross_validation(data = credit, model_wkflow = logit_wkflow, num_splits = 5,
-                 metric = "recall", no_class = 0)
+                 metric = "accuracy", no_class = 0, bound = 0.5) # check, not 0?
+
+lda_rec_1 <- recipe(TARGET ~ ., data = credit) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_zv(all_predictors())
+
+lda_mod <- discrim_linear() |>
+  set_mode("classification") |>
+  set_engine("MASS")
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec_1)
+
+# cross_validation(data = credit, model_wkflow = lda_wkflow, num_splits = 5,
+#                  metric = "accuracy", no_class = 0, bound = 0) # check, why so small?
+
+svc_rec_1 <- recipe(TARGET ~ ., data = credit) |>
+  step_mutate(TARGET = factor(if_else(TARGET == 0, -1, TARGET))) |>
+  step_zv(all_predictors())
+
+svc_mod <- svm_linear() |>
+  set_mode("classification") |>
+  set_engine("kernlab", prob.model = TRUE) # check, not LiblineaR?
+
+svc_wkflow <- workflow() |>
+  add_model(svc_mod) |>
+  add_recipe(svc_rec_1)
+
+# cross_validation(data = credit, model_wkflow = svc_wkflow, num_splits = 5,
+#                  metric = "accuracy", no_class = -1, bound = 0) # check, why error?
