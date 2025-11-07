@@ -26,6 +26,9 @@ logit_wkflow <- workflow() |>
 cross_validation(data = credit, model = "logistic", model_wkflow = logit_wkflow, num_splits = 5,
                  metric = "accuracy", no_class = 0, bound = 0) 
 
+cross_validation(data = credit, model = "logistic", model_wkflow = logit_wkflow, num_splits = 5,
+                 metric = "recall", no_class = 0, bound = 0)
+
 lda_rec_1 <- recipe(TARGET ~ ., data = credit) |>
   step_mutate(TARGET = factor(TARGET)) |>
   step_zv(all_predictors())
