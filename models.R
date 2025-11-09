@@ -1,7 +1,6 @@
 library(tidyverse)
 library(tidymodels)
 library(discrim)
-# check, which one of these two?:
 library(kernlab)
 
 source(here::here("data_cleaning.R"))
@@ -46,17 +45,19 @@ lda_wkflow <- workflow() |>
 cross_validation(data = credit, model = "lda", model_wkflow = lda_wkflow, num_splits = 5,
                  metric = "accuracy", no_class = 0, bound = 0)
 
-svc_rec_1 <- recipe(TARGET ~ ., data = credit) |>
+sub_credit <- credit[1:10000, ]
+
+svc_rec_1 <- recipe(TARGET ~ ., data = sub_credit) |>
   step_mutate(TARGET = factor(if_else(TARGET == 0, -1, TARGET))) |>
   step_zv(all_predictors())
 
 svc_mod <- svm_linear() |>
   set_mode("classification") |>
-  set_engine("kernlab", decision.values = TRUE)
+  set_engine("kernlab", prob.model = TRUE)
 
 svc_wkflow <- workflow() |>
   add_model(svc_mod) |>
   add_recipe(svc_rec_1)
 
-# cross_validation(data = credit, model = "svc", model_wkflow = svc_wkflow, num_splits = 5,
-#                  metric = "accuracy", no_class = -1, bound = 0) # check, why error?
+cross_validation(data = sub_credit, model = "svc", model_wkflow = svc_wkflow,
+                 num_splits = 3, metric = "accuracy", no_class = 0, bound = 0.5)
