@@ -6,7 +6,7 @@
 calc_metric <- function(observed, predicted, no_class, bound) {
   # TODO: add denom != 0 check
   cm <- calc_confusion_matrix(observed, predicted, no_class, bound)
-
+  
   accuracy = (cm$TP + cm$TN) / (cm$TP + cm$TN + cm$FP + cm$FN)
   
   f1_score <- (2 * cm$TP) / ((2 * cm$TP) + cm$FP + cm$FN)
@@ -58,9 +58,13 @@ cross_validation <- function(data, model, model_wkflow, num_splits, no_class, bo
     
     if (model == "svc") {
       coefs <- tidy(model_fit)$estimate
-      predictors <- cbind(train_df[-length(data)], INTERCEPT = 1)
+      predictors <- cbind(test_df[-ncol(test_df)], INTERCEPT = 1)
       scores <- as.matrix(predictors) %*% coefs
-      preds <- 1 / (1 + exp(-scores))
+      score1 <- max(scores)
+      score0 <- min(scores)
+      preds <- if_else(scores <= 0,
+                       0.5 * ((scores - score0) / (-score0)),
+                       0.5 + (0.5 * (scores / score1)))
     } else {
       preds <- predict(model_fit, new_data = test_df, type = "prob")$.pred_1
     }
@@ -110,7 +114,7 @@ calc_roc_auc <- function(observed, predicted, no_class, bounds) {
   # then, find the area under the curve (using trapezoidal area)
   area_sum <- 0
   for (i in 1:(length(senses) - 1)) {
-    area <- ((senses[i] - senses[i+1]) * (specs[i] + specs[i+1])) / 2
+    area <- ((senses[i] - senses[i+1]) * (specs[i] + specs[i + 1])) / 2
     area_sum <- area_sum + area
   }
 
