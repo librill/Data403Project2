@@ -59,7 +59,7 @@ svc_rec_1 <- recipe(TARGET ~ ., data = sub_credit) |>
 
 svc_mod <- svm_linear() |>
   set_mode("classification") |>
-  set_engine("kernlab", prob.model = TRUE, max_iter = 1e100)
+  set_engine("kernlab", prob.model = TRUE, max_iter = 1e1000)
 
 svc_wkflow <- workflow() |>
   add_model(svc_mod) |>
