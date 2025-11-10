@@ -4,27 +4,21 @@
 # returns metric
 # --
 calc_metric <- function(observed, predicted, metric, no_class, bound) {
+  # TODO: add denom != 0 check
   cm <- calc_confusion_matrix(observed, predicted, no_class, bound)
+
+  accuracy = (cm$TP + cm$TN) / (cm$TP + cm$TN + cm$FP + cm$FN)
   
-  if (metric == "roc_auc") {
-    bounds <- seq(from=0, to=1, by=.0125)
-    return(calc_roc_auc(observed, predicted, no_class, bounds))
-  } else if (metric == "accuracy") {
-    num <- cm$TP + cm$TN
-    denom <- cm$TP + cm$TN + cm$FP + cm$FN
-  } else if (metric == "f1") {
-    num <- 2 * cm$TP
-    denom <- (2 * cm$TP) + cm$FP + cm$FN
-  } else if (metric == "recall") {
-    num <- cm$TP
-    denom <- cm$TP + cm$FN
-  } else {
-    stop ("ERROR: not an available metric")
-  }
-  if (denom == 0) {
-    stop ("ERROR: denominator is 0")
-  }
-  return (num / denom)
+  f1_score <- (2 * cm$TP) / ((2 * cm$TP) + cm$FP + cm$FN)
+  
+  recall <- cm$TP / (cm$TP + cm$FN)
+  
+  bounds <- seq(from = 0, to = 1, by = .0125)
+  roc_auc <- calc_roc_auc(observed, predicted, no_class, bounds)
+  
+  result <- c(accuracy, f1_score, recall, roc_auc)
+  
+  return (result)
 }
 
 # --
@@ -39,7 +33,7 @@ calc_confusion_matrix <- function(observed, predicted, no_class, bound) {
   FP <- sum(pred_class == 1 & observed == no_class)
   FN <- sum(pred_class == no_class & observed == 1)
   
-  return(list(TP=TP, TN=TN, FP=FP, FN=FN))
+  return(list(TP = TP, TN = TN, FP = FP, FN = FN))
 }
 
 # --
@@ -53,7 +47,7 @@ cross_validation <- function(data, model, model_wkflow, num_splits, metric, no_c
   set.seed(18938)
   df_cvs <- vfold_cv(data, v = num_splits)
 
-  metric_total <- 0
+  metrics_total <- 0
   
   for (i in 1:num_splits) {
     train_df <- analysis(df_cvs$splits[[i]])
@@ -72,11 +66,18 @@ cross_validation <- function(data, model, model_wkflow, num_splits, metric, no_c
       preds <- predict(model_fit, new_data = test_df, type = "prob")$.pred_1
     }
     
-    split_metric <- calc_metric(test_df[[ncol(test_df)]], preds, metric, no_class, bound)
-    metric_total = metric_total + split_metric
+    split_metrics <- calc_metric(test_df[[ncol(test_df)]], preds, metric, no_class, bound)
+    metrics_total = metrics_total + split_metrics
   }
-  result <- metric_total / num_splits
-  return (result)
+  
+  results <- metrics_total / num_splits
+  df_results <- data.frame(metric = c("Accuracy",
+                                      "F1 Score",
+                                      "Recall",
+                                      "ROC-AUC"),
+                           value = results)
+  
+  return (df_results)
 }
 
 # --
