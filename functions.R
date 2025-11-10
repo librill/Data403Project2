@@ -60,12 +60,11 @@ cross_validation <- function(data, model, model_wkflow, num_splits, no_class, bo
       preds <- predict(model_fit, new_data = test_df, type = "prob")$.pred_1
     } else if (model == "lda") { 
       preds <- predict(model_fit, new_data = test_df, type = "prob")$.pred_1
-      print(preds)
     } else {
       preds <- predict(model_fit, new_data = test_df, type = "prob")$.pred_1
     }
     
-    split_metrics <- calc_metric(test_df[[ncol(test_df)]], preds, metric, no_class, bound)
+    split_metrics <- calc_metric(test_df[[ncol(test_df)]], preds, no_class, bound)
     metrics_total = metrics_total + split_metrics
   }
   

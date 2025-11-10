@@ -28,7 +28,7 @@ logit_wkflow <- workflow() |>
   add_recipe(lg_rec_1)
 
 cross_validation(data = credit, model = "logistic", model_wkflow = logit_wkflow, num_splits = 5,
-                 metric = "roc_auc", no_class = 0, bound = .5)
+                 no_class = 0, bound = .5)
 
 # --
 # LDA
@@ -49,7 +49,7 @@ lda_wkflow <- workflow() |>
 # TODO: fix collinearity for better scores
 
 cross_validation(data = credit, model = "lda", model_wkflow = lda_wkflow, num_splits = 5,
-                 metric = "accuracy", no_class = 0, bound = .5)
+                 no_class = 0, bound = .5)
 
 # --
 # SVC
