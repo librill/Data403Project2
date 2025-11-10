@@ -2,12 +2,18 @@ library(tidyverse)
 library(tidymodels)
 library(discrim)
 library(kernlab)
+# for testing ground-truth ROC
+library(pROC) 
 
 source(here::here("data_cleaning.R"))
 source(here::here("functions.R"))
 
 credit <- credit |>
   na.omit()
+
+# --
+# LOGISTIC
+# --
 
 lg_rec_1 <- recipe(TARGET ~ ., data = credit) |>
   step_mutate(TARGET = factor(TARGET)) |>
@@ -22,10 +28,11 @@ logit_wkflow <- workflow() |>
   add_recipe(lg_rec_1)
 
 cross_validation(data = credit, model = "logistic", model_wkflow = logit_wkflow, num_splits = 5,
-                 metric = "accuracy", no_class = 0, bound = 0) 
+                 metric = "roc_auc", no_class = 0, bound = .5)
 
-cross_validation(data = credit, model = "logistic", model_wkflow = logit_wkflow, num_splits = 5,
-                 metric = "recall", no_class = 0, bound = 0)
+# --
+# LDA
+# --
 
 lda_rec_1 <- recipe(TARGET ~ ., data = credit) |>
   step_mutate(TARGET = factor(TARGET)) |>
@@ -39,11 +46,14 @@ lda_wkflow <- workflow() |>
   add_model(lda_mod) |>
   add_recipe(lda_rec_1)
 
-# TODO: fix collinearity
-# TODO: create constants in codebase ...?
+# TODO: fix collinearity for better scores
 
 cross_validation(data = credit, model = "lda", model_wkflow = lda_wkflow, num_splits = 5,
-                 metric = "accuracy", no_class = 0, bound = 0)
+                 metric = "accuracy", no_class = 0, bound = .5)
+
+# --
+# SVC
+# --
 
 # NOTE: SVC only working on 10,000 rows ...
 sub_credit <- credit[1:10000, ]
