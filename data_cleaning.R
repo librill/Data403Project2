@@ -48,6 +48,3 @@ credit <- all_credit %>%
     DOCUMENTS_FLAGGED, 
     TARGET
   )
-
-
-

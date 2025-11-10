@@ -40,11 +40,12 @@ lda_wkflow <- workflow() |>
   add_recipe(lda_rec_1)
 
 # TODO: fix collinearity
-# TODO: create constants ...?
+# TODO: create constants in codebase ...?
 
 cross_validation(data = credit, model = "lda", model_wkflow = lda_wkflow, num_splits = 5,
                  metric = "accuracy", no_class = 0, bound = 0)
 
+# NOTE: SVC only working on 10,000 rows ...
 sub_credit <- credit[1:10000, ]
 
 svc_rec_1 <- recipe(TARGET ~ ., data = sub_credit) |>
