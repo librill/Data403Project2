@@ -50,15 +50,26 @@ sub_credit <- credit[1:10000, ]
 
 svc_rec_1 <- recipe(TARGET ~ ., data = sub_credit) |>
   step_mutate(TARGET = factor(if_else(TARGET == 0, -1, TARGET))) |>
+  step_normalize(all_numeric_predictors()) |>
   step_zv(all_predictors())
+
+# svc_mod <- svm_linear() |>
+#   set_mode("classification") |>
+#   set_engine("kernlab", prob.model = TRUE, fit.args = list(control = list(maxiter = 1e5)))
 
 svc_mod <- svm_linear() |>
   set_mode("classification") |>
-  set_engine("kernlab", prob.model = TRUE)
+  set_engine("kernlab", prob.model = TRUE, max_iter = 1e100)
 
 svc_wkflow <- workflow() |>
   add_model(svc_mod) |>
   add_recipe(svc_rec_1)
 
 cross_validation(data = sub_credit, model = "svc", model_wkflow = svc_wkflow,
-                 num_splits = 3, metric = "accuracy", no_class = 0, bound = 0.5)
+                 num_splits = 5, metric = "accuracy", no_class = 0, bound = 0.5)
+
+set.seed(18938)
+cvs <- vfold_cv(sub_credit, v = 5)
+svc_wkflow |>
+  fit_resamples(resamples = cvs, metrics = metric_set(accuracy, roc_auc)) |>
+  collect_metrics()
