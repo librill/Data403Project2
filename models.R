@@ -30,6 +30,31 @@ logit_wkflow <- workflow() |>
 cross_validation(data = credit, model = "logistic", model_wkflow = logit_wkflow,
                  num_splits = 5, no_class = 0, bound = 0.5)
 
+# Completely Random Sample:
+splits <- random_split(credit, train_prop = 0.7, val_prop = 0.1, seed = 123)
+train_random <- splits$train
+val_random <- splits$validation
+test_random <- splits$test
+
+lg_rec_1 <- recipe(TARGET ~ ., data = train_random) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_naomit(all_predictors()) |>
+  step_dummy(all_nominal_predictors())
+
+logit_mod <- logistic_reg() |>
+  set_mode("classification") |>
+  set_engine("glm")
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec_1)
+
+# val_random <- val_random |>
+#   mutate(TARGET = factor(TARGET))
+
+cross_validation(data = val_random, model = "logistic", model_wkflow = logit_wkflow, num_splits = 5,
+                 no_class = 0, bound = 0.5)
+
 set.seed(18938)
 cvs <- vfold_cv(credit, v = 5)
 logit_wkflow |>
