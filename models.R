@@ -68,11 +68,11 @@ lda_wkflow |>
 # --
 
 # NOTE: SVC only working on 10,000 rows ...
-sub_credit <- credit[100:300, ]
+sub_credit <- credit[200:400, ]
 
 svc_rec_1 <- recipe(TARGET ~ ., data = sub_credit) |>
-  #step_mutate(TARGET = factor(if_else(TARGET == 0, -1, TARGET))) |>
-  step_mutate(TARGET = factor(TARGET)) |>
+  step_mutate(TARGET = factor(if_else(TARGET == 0, -1, TARGET), levels = c(1, -1))) |>
+  #step_mutate(TARGET = factor(TARGET)) |>
   step_normalize(all_numeric_predictors()) |>
   step_zv(all_predictors())
 
@@ -84,9 +84,11 @@ svc_wkflow <- workflow() |>
   add_model(svc_mod) |>
   add_recipe(svc_rec_1)
 
+# new function
 cross_validation(data = sub_credit, model = "svc", model_wkflow = svc_wkflow,
                  num_splits = 5, no_class = -1, bound = 0.5)
 
+# existing function (for value comparison)
 set.seed(18938)
 cvs <- vfold_cv(sub_credit, v = 5)
 svc_wkflow |>
