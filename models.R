@@ -71,7 +71,7 @@ lda_wkflow |>
 sub_credit <- credit[200:400, ]
 
 svc_rec_1 <- recipe(TARGET ~ ., data = sub_credit) |>
-  step_mutate(TARGET = factor(if_else(TARGET == 0, -1, TARGET), levels = c(1, -1))) |>
+  step_mutate(TARGET = factor(if_else(TARGET == 0, -1, TARGET))) |>
   #step_mutate(TARGET = factor(TARGET)) |>
   step_normalize(all_numeric_predictors()) |>
   step_zv(all_predictors())
