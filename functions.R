@@ -56,7 +56,14 @@ cross_validation <- function(data, model, model_wkflow, num_splits, no_class, bo
       fit(train_df) |>
       extract_fit_parsnip()
     
-    preds <- predict(model_fit, new_data = test_df, type = "prob")$.pred_1
+    if (model == "svc") {
+      coefs <- tidy(model_fit)$estimate
+      predictors <- cbind(train_df[-length(data)], INTERCEPT = 1)
+      scores <- as.matrix(predictors) %*% coefs
+      preds <- 1 / (1 + exp(-scores))
+    } else {
+      preds <- predict(model_fit, new_data = test_df, type = "prob")$.pred_1
+    }
     
     split_metrics <- calc_metric(test_df[[ncol(test_df)]], preds, no_class, bound)
     metrics_total = metrics_total + split_metrics
