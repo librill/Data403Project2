@@ -56,13 +56,7 @@ cross_validation <- function(data, model, model_wkflow, num_splits, no_class, bo
       fit(train_df) |>
       extract_fit_parsnip()
     
-    if (model == "logistic") {
-      preds <- predict(model_fit, new_data = test_df, type = "prob")$.pred_1
-    } else if (model == "lda") { 
-      preds <- predict(model_fit, new_data = test_df, type = "prob")$.pred_1
-    } else {
-      preds <- predict(model_fit, new_data = test_df, type = "prob")$.pred_1
-    }
+    preds <- predict(model_fit, new_data = test_df, type = "prob")$.pred_1
     
     split_metrics <- calc_metric(test_df[[ncol(test_df)]], preds, no_class, bound)
     metrics_total = metrics_total + split_metrics

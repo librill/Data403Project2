@@ -27,8 +27,14 @@ logit_wkflow <- workflow() |>
   add_model(logit_mod) |>
   add_recipe(lg_rec_1)
 
-cross_validation(data = credit, model = "logistic", model_wkflow = logit_wkflow, num_splits = 5,
-                 no_class = 0, bound = .5)
+cross_validation(data = credit, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+
+set.seed(18938)
+cvs <- vfold_cv(credit, v = 5)
+logit_wkflow |>
+  fit_resamples(resamples = cvs, metrics = metric_set(accuracy, recall, roc_auc)) |>
+  collect_metrics()
 
 # --
 # LDA
@@ -48,38 +54,41 @@ lda_wkflow <- workflow() |>
 
 # TODO: fix collinearity for better scores
 
-cross_validation(data = credit, model = "lda", model_wkflow = lda_wkflow, num_splits = 5,
-                 no_class = 0, bound = .5)
+cross_validation(data = credit, model = "lda", model_wkflow = lda_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+
+set.seed(18938)
+cvs <- vfold_cv(credit, v = 5)
+lda_wkflow |>
+  fit_resamples(resamples = cvs, metrics = metric_set(accuracy, recall, roc_auc)) |>
+  collect_metrics()
 
 # --
 # SVC
 # --
 
 # NOTE: SVC only working on 10,000 rows ...
-sub_credit <- credit[1:10000, ]
+sub_credit <- credit[100:300, ]
 
 svc_rec_1 <- recipe(TARGET ~ ., data = sub_credit) |>
-  step_mutate(TARGET = factor(if_else(TARGET == 0, -1, TARGET))) |>
+  #step_mutate(TARGET = factor(if_else(TARGET == 0, -1, TARGET))) |>
+  step_mutate(TARGET = factor(TARGET)) |>
   step_normalize(all_numeric_predictors()) |>
   step_zv(all_predictors())
 
-# svc_mod <- svm_linear() |>
-#   set_mode("classification") |>
-#   set_engine("kernlab", prob.model = TRUE, fit.args = list(control = list(maxiter = 1e5)))
-
 svc_mod <- svm_linear() |>
   set_mode("classification") |>
-  set_engine("kernlab", max_iter = 1e100)
+  set_engine("kernlab")
 
 svc_wkflow <- workflow() |>
   add_model(svc_mod) |>
   add_recipe(svc_rec_1)
 
 cross_validation(data = sub_credit, model = "svc", model_wkflow = svc_wkflow,
-                 num_splits = 5, metric = "accuracy", no_class = 0, bound = 0.5)
+                 num_splits = 5, no_class = -1, bound = 0.5)
 
 set.seed(18938)
 cvs <- vfold_cv(sub_credit, v = 5)
 svc_wkflow |>
-  fit_resamples(resamples = cvs, metrics = metric_set(accuracy, roc_auc)) |>
+  fit_resamples(resamples = cvs, metrics = metric_set(accuracy, recall, roc_auc)) |>
   collect_metrics()
