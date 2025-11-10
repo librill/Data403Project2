@@ -1,9 +1,9 @@
 # --
 # calculate metric 
-# consumes observed and predicted values, metric type, ..., and decision boundary
+# consumes observed and predicted values, ..., and decision boundary
 # returns metric
 # --
-calc_metric <- function(observed, predicted, metric, no_class, bound) {
+calc_metric <- function(observed, predicted, no_class, bound) {
   # TODO: add denom != 0 check
   cm <- calc_confusion_matrix(observed, predicted, no_class, bound)
 
@@ -38,12 +38,11 @@ calc_confusion_matrix <- function(observed, predicted, no_class, bound) {
 
 # --
 # perform k-fold cross-validation
-# consumes data, model type, model workflow, k, evaluation metric, ..., and
-# decision boundary
+# consumes data, model type, model workflow, k, ..., and decision boundary
 # returns metric average across k folds
 # NOTE: in data, y must be the last column
 # --
-cross_validation <- function(data, model, model_wkflow, num_splits, metric, no_class, bound) {
+cross_validation <- function(data, model, model_wkflow, num_splits, no_class, bound) {
   set.seed(18938)
   df_cvs <- vfold_cv(data, v = num_splits)
 
