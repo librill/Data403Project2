@@ -9,9 +9,8 @@ source(here::here("data_cleaning.R"))
 source(here::here("functions.R"))
 source(here::here("splits.R"))
 
-credit <- credit |>
+credit <- credit |> 
   na.omit()
-
 # --
 # LOGISTIC
 # --
@@ -50,8 +49,8 @@ logit_wkflow <- workflow() |>
   add_model(logit_mod) |>
   add_recipe(lg_rec_1)
 
-# val_random <- val_random |>
-#   mutate(TARGET = factor(TARGET))
+val_random <- val_random |>
+   mutate(TARGET = factor(TARGET))
 
 cross_validation(data = val_random, model = "logistic", model_wkflow = logit_wkflow, num_splits = 5,
                  no_class = 0, bound = 0.5)
