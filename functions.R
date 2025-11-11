@@ -11,8 +11,8 @@ calc_metric <- function(observed, predicted, no_class, bound) {
   
   accuracy = (cm$TP + cm$TN) / (cm$TP + cm$TN + cm$FP + cm$FN)
   f1_score <- (2 * cm$TP) / ((2 * cm$TP) + cm$FP + cm$FN)
-  recall <- cm$TP / (cm$TP + cm$FN)
   precision <- cm$TP / (cm$TP + cm$FP)
+  recall <- cm$TP / (cm$TP + cm$FN)
   bounds <- seq(from = 0, to = 1, by = .00625)
   roc_auc <- calc_roc_auc(observed, predicted, no_class, bounds)
   
@@ -69,7 +69,7 @@ cross_validation <- function(data, model, model_wkflow, num_splits, no_class, bo
       preds <- predict(model_fit, new_data = test_df, type = "prob")$.pred_1
     }
     
-    split_metrics <- calc_metric(test_df[[ncol(test_df)]], preds, no_class, bound)
+    split_metrics <- calc_metric(test_df[, ncol(test_df)], preds, no_class, bound)
     metrics_total = metrics_total + split_metrics
   }
   
