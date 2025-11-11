@@ -8,7 +8,7 @@ all_credit <- read_csv(here::here("Data", "application_train.csv"))
 # aggregate documents flagged, one-hot-encode, and select columns
 # NOTE: some parts commented out to prevent collinearity
 credit <- all_credit %>% 
-  mutate(TARGET = factor(TARGET, levels = c(0, 1)))
+  mutate(TARGET = factor(TARGET, levels = c(0, 1))) %>%
   mutate(
     DOCUMENTS_FLAGGED = rowSums(select(., starts_with("FLAG_DOCUMENT")))
   ) %>% 
