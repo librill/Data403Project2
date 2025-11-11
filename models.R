@@ -3,10 +3,11 @@ library(tidymodels)
 library(discrim)
 library(LiblineaR)
 # for testing ground-truth ROC
-library(pROC)
+# library(pROC)
 
 source(here::here("data_cleaning.R"))
 source(here::here("functions.R"))
+source(here::here("splits.R"))
 
 credit <- credit |>
   na.omit()

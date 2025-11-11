@@ -3,20 +3,20 @@
 # consumes observed and predicted values, ..., and decision boundary
 # returns metric
 # --
+
+# TODO: add denom != 0 check
+
 calc_metric <- function(observed, predicted, no_class, bound) {
-  # TODO: add denom != 0 check
   cm <- calc_confusion_matrix(observed, predicted, no_class, bound)
   
   accuracy = (cm$TP + cm$TN) / (cm$TP + cm$TN + cm$FP + cm$FN)
-  
   f1_score <- (2 * cm$TP) / ((2 * cm$TP) + cm$FP + cm$FN)
-  
   recall <- cm$TP / (cm$TP + cm$FN)
-  
-  bounds <- seq(from = 0, to = 1, by = .0125)
+  precision <- cm$TP / (cm$TP + cm$FP)
+  bounds <- seq(from = 0, to = 1, by = .00625)
   roc_auc <- calc_roc_auc(observed, predicted, no_class, bounds)
   
-  result <- c(accuracy, f1_score, recall, roc_auc)
+  result <- c(accuracy, f1_score, precision, recall, roc_auc)
   
   return (result)
 }
@@ -76,6 +76,7 @@ cross_validation <- function(data, model, model_wkflow, num_splits, no_class, bo
   results <- metrics_total / num_splits
   df_results <- data.frame(metric = c("Accuracy",
                                       "F1 Score",
+                                      "Precision",
                                       "Recall",
                                       "ROC-AUC"),
                            value = results)
@@ -86,6 +87,7 @@ cross_validation <- function(data, model, model_wkflow, num_splits, no_class, bo
 # --
 # calculate ROC-AUC
 # consumes observed and predicted values, ..., and list of boundaries
+# returns auc of roc
 # --
 
 # NOTE: this assumes bounds are valid for probabilities (between 0 and 1), 

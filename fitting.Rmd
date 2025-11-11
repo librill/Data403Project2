@@ -1,0 +1,561 @@
+---
+title: "Sampling"
+output: html_notebook
+---
+
+### Setup
+
+```{r, include=FALSE}
+library(dplyr)
+
+source(here::here("data_cleaning.R"))
+source(here::here("functions.R"))
+source(here::here("splits.R"))
+```
+
+```{r}
+# ---
+# creates undersampled dataframe
+# consumes dataframe, desired percent of positive class (1, in this case)
+# returns new dataframe with correct proportion of positive and negative classes
+# NOTE: we are assuming 'TARGET' is the response variable, values 0 and 1
+# ---
+
+undersample_split <- function(df, pct_positive = .5) {
+  # want to grab all positive, negative classes
+  df_positive <- df %>%
+    filter(TARGET == 1)
+  
+  df_negative <- df %>%
+    filter(TARGET == 0)
+  
+  # count how many postive, get correct proportion negative
+  num_pos <- nrow(df_positive)
+  num_neg <- floor(((1 - pct_positive) / pct_positive) * num_pos)
+  
+  # sample negative observations randomly
+  df_negative_sampled <- df_negative[sample(nrow(df_negative), num_neg, replace=FALSE), ]
+
+  # return combined dataframe
+  all_sampled <- rbind(df_positive, df_negative_sampled)
+  return(all_sampled)
+}
+```
+
+```{r}
+# names to choose from
+colnames(credit)
+```
+
+```{r}
+# define model (used for all)
+logit_mod <- logistic_reg() |>
+  set_mode("classification") |>
+  set_engine("glm")
+```
+
+## Logistic Classifier
+
+### "Natural" (No Undersampling)
+```{r}
+# load data
+credit <- credit |>
+  na.omit()
+
+# then, create sets
+splits <- random_split(credit, train_prop = 0.7, val_prop = 0.1, seed = 123)
+train_random <- splits$train
+val_random <- splits$validation
+test_random <- splits$test
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ ., data = train_random) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ FAMILY_STATUS_MARRIED + HOUSING_TYPE_PARENTS + HOUSING_TYPE_OWN + AMT_INCOME_TOTAL, data = train_random) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+**I feel that results are just not going to be good here, so need the 50/50 split to 
+get anything even decent**
+
+### 50/50 Split
+
+```{r}
+# undersample
+credit_fifty <- undersample_split(credit, 0.5)
+
+# then, create sets
+splits <- random_split(credit_fifty, train_prop = 0.7, val_prop = 0.1, seed = 123)
+train_random_fifty <- splits$train
+val_random_fifty <- splits$validation
+test_random_fifty <- splits$test
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ ., data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ ., data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING + AMT_CREDIT + AMT_INCOME_TOTAL + HOUSING_TYPE_OWN, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING + EDUCATION_TYPE_SECONDARY, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING + CNT_CHILDREN, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+
+```{r}
+lg_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING + HOUSING_TYPE_OWN, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+```{r}
+lg_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING + DOCUMENTS_FLAGGED, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+```{r}
+lg_rec <- recipe(TARGET ~ DOCUMENTS_FLAGGED, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ CNT_CHILDREN, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ AMT_CREDIT + AMT_ANNUITY + AMT_INCOME_TOTAL, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ FLAG_OWN_CAR + FLAG_OWN_REALTY, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+### 30/70 Split
+
+```{r}
+# load data
+credit <- credit |>
+  na.omit()
+
+# undersample
+credit_thirty <- undersample_split(credit, pct_positive=0.3)
+
+# then, create sets
+splits <- random_split(credit_thirty, train_prop = 0.7, val_prop = 0.1, seed = 123)
+train_random_thirty <- splits$train
+val_random_thirty <- splits$validation
+test_random_thirty <- splits$test
+```
+
+```{r}
+# now, try different variations of variables and stuff ..
+lg_rec <- recipe(TARGET ~ ., data = train_random_thirty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_thirty, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING + DOCUMENTS_FLAGGED, data = train_random_thirty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_thirty, model = "logistic", model_wkflow = logit_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING, data = train_random_thirty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_thirty, model = "logistic", model_wkflow = logit_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+**overall, it seems like 30/70 split is not enough to get accurate results, 
+try a medium ground of 40/60**
+
+## 40/60 Split
+
+```{r}
+# load data
+credit <- credit |>
+  na.omit()
+
+# undersample
+credit_forty <- undersample_split(credit, pct_positive=0.4)
+
+# then, create sets
+splits <- random_split(credit_forty, train_prop = 0.7, val_prop = 0.1, seed = 123)
+train_random_forty <- splits$train
+val_random_forty <- splits$validation
+test_random_forty <- splits$test
+```
+
+```{r}
+# now, try different variations of variables and stuff ..
+lg_rec <- recipe(TARGET ~ ., data = train_random_forty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_forty, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+
+```{r}
+lg_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING + DOCUMENTS_FLAGGED, data = train_random_forty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_forty, model = "logistic", model_wkflow = logit_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+**seems like the results here aren't great either, so maybe should stick to 50/50 
+stuff moving forward?**
+
+## TODO: playing around with the threshold itself ...
+
+```{r}
+lg_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING + DOCUMENTS_FLAGGED, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+prec_vs_recall <- data.frame()
+
+for (i in seq(0, 1, .05)) {
+  df <- cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                           num_splits = 5, no_class = 0, bound = i)
+  precision <- df[3, 2]
+  recall <- df[4, 2]
+  
+  prec_vs_recall <- rbind(prec_vs_recall, data.frame(boundary=i, precision=precision, recall=recall))
+}
+
+prec_vs_recall
+```
+
+## LDA Classifier
+
+```{r}
+# define model (used for all)
+lda_mod <- discrim_linear() |>
+  set_mode("classification") |>
+  set_engine("MASS")
+```
+
+### "Natural" Split
+
+```{r}
+lda_rec <- recipe(TARGET ~ ., data = train_random) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_zv(all_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+cross_validation(data = train_random, model = "lda", model_wkflow = lda_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lda_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING + DOCUMENTS_FLAGGED, data = train_random) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_zv(all_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+cross_validation(data = train_random, model = "lda", model_wkflow = lda_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+### 50/50 split
+
+```{r}
+lda_rec <- recipe(TARGET ~ ., data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_zv(all_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+cross_validation(data = train_random_fifty, model = "lda", model_wkflow = lda_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lda_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING + DOCUMENTS_FLAGGED, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_zv(all_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+cross_validation(data = train_random_fifty, model = "lda", model_wkflow = lda_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+Show in New Window
+ [1] "SK_ID_CURR"               "CONTRACT_TYPE_REVOLVING"  "FLAG_OWN_CAR"            
+ [4] "FLAG_OWN_REALTY"          "CNT_CHILDREN"             "AMT_INCOME_TOTAL"        
+ [7] "AMT_CREDIT"               "AMT_ANNUITY"              "AMT_GOODS_PRICE"         
+[10] "EDUCATION_TYPE_SECONDARY" "EDUCATION_TYPE_HIGHER"    "FAMILY_STATUS_MARRIED"   
+[13] "FAMILY_STATUS_OTHER"      "HOUSING_TYPE_OWN"         "HOUSING_TYPE_PARENTS"    
+[16] "DAYS_EMPLOYED"            "DOCUMENTS_FLAGGED"        "TARGET" 
+
+```{r}
+lda_rec <- recipe(TARGET ~ HOUSING_TYPE_PARENTS + HOUSING_TYPE_OWN, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_zv(all_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+cross_validation(data = train_random_fifty, model = "lda", model_wkflow = lda_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lda_rec <- recipe(TARGET ~ FLAG_OWN_REALTY + FLAG_OWN_CAR + HOUSING_TYPE_OWN + HOUSING_TYPE_PARENTS, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_zv(all_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+cross_validation(data = train_random_fifty, model = "lda", model_wkflow = lda_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lda_rec <- recipe(TARGET ~ AMT_CREDIT + AMT_ANNUITY + AMT_GOODS_PRICE + AMT_INCOME_TOTAL, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_zv(all_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+cross_validation(data = train_random_fifty, model = "lda", model_wkflow = lda_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lda_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_zv(all_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+cross_validation(data = train_random_fifty, model = "lda", model_wkflow = lda_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lda_rec <- recipe(TARGET ~ FAMILY_STATUS_OTHER + FAMILY_STATUS_MARRIED, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_zv(all_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+cross_validation(data = train_random_fifty, model = "lda", model_wkflow = lda_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+```{r}
+lda_rec <- recipe(TARGET ~ CNT_CHILDREN + EDUCATION_TYPE_SECONDARY + EDUCATION_TYPE_HIGHER, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_zv(all_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+cross_validation(data = train_random_fifty, model = "lda", model_wkflow = lda_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lda_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING + DOCUMENTS_FLAGGED, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_zv(all_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+cross_validation(data = train_random_fifty, model = "lda", model_wkflow = lda_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
