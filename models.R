@@ -58,7 +58,7 @@ cross_validation(data = val_random, model = "logistic", model_wkflow = logit_wkf
 set.seed(18938)
 cvs <- vfold_cv(credit, v = 5)
 logit_wkflow |>
-  fit_resamples(resamples = cvs, metrics = metric_set(accuracy, recall, roc_auc)) |>
+  fit_resamples(resamples = cvs, metrics = metric_set(accuracy, f_meas, precision, recall, roc_auc)) |>
   collect_metrics()
 
 # --

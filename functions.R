@@ -6,7 +6,7 @@
 
 # TODO: add denom != 0 check
 
-calc_metric <- function(observed, predicted, no_class, bound) {
+calc_metrics <- function(observed, predicted, no_class, bound) {
   cm <- calc_confusion_matrix(observed, predicted, no_class, bound)
   
   accuracy = (cm$TP + cm$TN) / (cm$TP + cm$TN + cm$FP + cm$FN)
@@ -69,7 +69,7 @@ cross_validation <- function(data, model, model_wkflow, num_splits, no_class, bo
       preds <- predict(model_fit, new_data = test_df, type = "prob")$.pred_1
     }
     
-    split_metrics <- calc_metric(test_df[, ncol(test_df)], preds, no_class, bound)
+    split_metrics <- calc_metrics(test_df[, ncol(test_df)], preds, no_class, bound)
     metrics_total = metrics_total + split_metrics
   }
   
@@ -121,4 +121,38 @@ calc_roc_auc <- function(observed, predicted, no_class, bounds) {
   }
 
   return(area_sum)
+}
+
+
+# --
+# calculate demographic parity, equal opportunity, and fpr parity
+# consumes protected class (vector from data), observed and predicted values, ..., and a decision boundary
+# returns fairness metrics
+# --
+
+calc_fairness_metrics <- function(protected_class, observed, pred_class, no_class, bound) {
+  class_levels <- unique(protected_class)
+  num_groups <- length(class_levels)
+  
+  # demographic parity
+  positive_predictions <- c()
+  # equal opportunity
+  recalls <- c()
+  # false positive rate parity
+  error_rates <- c()
+  
+  for (i in 1:num_groups) {
+    include <- protected_class == class_levels[i]
+    cm <- calc_confusion_matrix(observed[include], pred_class[include], no_class, bound)
+    positive_predictions[i] <- (cm$TP + cm$FP) / (cm$TP + cm$TN + cm$FP + cm$FN)
+    recalls[i] <- cm$TP / (cm$TP + cm$FN)
+    error_rates[i] <- cm$FP / (cm$TN + cm$FP)
+  }
+  
+  result <- data.frame(class_levels = class_levels,
+                       demographic_parity = positive_predictions,
+                       equal_opportunity = recalls,
+                       fpr_parity = error_rates)
+  
+  return (result)
 }
