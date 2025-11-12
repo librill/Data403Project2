@@ -49,7 +49,7 @@ calc_confusion_matrix <- function(observed, predicted, no_class, bound) {
 # NOTE: just for one fold ...
 # characteristics in FALSE POSITIVES (getting a lot of those right now ..)
 # --
-understand_predictions <- function(data, model, model_wkflow, num_splits) {
+understand_predictions <- function(data, model, model_wkflow, num_splits, bound) {
   set.seed(18938)
   df_cvs <- vfold_cv(data, v = num_splits)
   
@@ -76,8 +76,8 @@ understand_predictions <- function(data, model, model_wkflow, num_splits) {
   }
   
   # get actual predictions, and values 0/1
-  test_df$preds <- round(preds, 2)
-  test_df$vals <- round(preds)
+  test_df$preds <- round(preds, 4)
+  test_df$vals <- ry <- ifelse(preds > bound, 1, 0)
   
   return(test_df)
 }

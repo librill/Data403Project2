@@ -336,12 +336,9 @@ logit_wkflow <- workflow() |>
 
 cross_validation(data = train_strat_fifty, model = "logistic", model_wkflow = logit_wkflow,
                            num_splits = 5, no_class = 0, bound = 0.5)
-```
 
-TAKE A LOOK AT THE FALSE POSITIVES, SEE IF THERE IS ANYTHING THAT
-I CAN FIND
-
-```{r}
+# TAKE A LOOK AT THE FALSE POSITIVES, SEE IF THERE IS ANYTHING THAT
+# I CAN FIND
 
 pred_df <- understand_predictions(data=train_strat_fifty, model = "logistic", 
                        model_wkflow = logit_wkflow, num_splits = 5)
@@ -363,6 +360,88 @@ our training/test/dev sets too small to be confident about their predictions ..
 is there other feature engineering that we could do? 
 should we combine with another dataset? 
 
+soemthing else that we can look into is combining data from the other tables in 
+kaggle? 
+
+# with income category? could that help at all? 
+**note: code for creating credit_income_category is included further down in the document**
+```{r}
+
+income_fifty <- undersample_split(credit_income_category, 0.5)
+colnames(income_fifty)
+```
+
+```{r}
+# then, create sets
+income_strat_splits_fifty <- strat_split(income_fifty, "TARGET", train_prop = 0.7, val_prop = 0.1, seed = 123)
+train_income_strat_fifty <- income_strat_splits_fifty$train
+val_income_strat_fifty <- income_strat_splits_fifty$val
+test_income_strat_fifty <- income_strat_splits_fifty$test
+
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING +DOCUMENTS_FLAGGED + FLAG_OWN_REALTY, data = train_income_strat_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+BOUND <- 0.5068
+
+cross_validation(data = train_income_strat_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                           num_splits = 5, no_class = 0, bound = BOUND)
+
+pred_df <- understand_predictions(data=train_strat_fifty, model = "logistic", 
+                       model_wkflow = logit_wkflow, num_splits = 5, bound = BOUND)
+# head(huh)
+fp_df <- pred_df %>%
+  filter(TARGET == 0 & vals == 1)
+
+head(fp_df)
+```
+
+#### try a stratified split on contract type instead ...
+
+```{r}
+contract_strat <- strat_split(credit_fifty, "CONTRACT_TYPE_REVOLVING", train_prop = 0.7, val_prop = 0.1, seed = 123)
+train_contract <- contract_strat$train
+val_contract <- contract_strat$val
+test_contract <- contract_strat$test
+```
+
+```{r}
+head(contract_strat)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING + DOCUMENTS_FLAGGED + AMT_INCOME_TOTAL, data = train_contract) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+BOUND <- 0.5
+
+cross_validation(data = train_contract, model = "logistic", model_wkflow = logit_wkflow,
+                           num_splits = 5, no_class = 0, bound = BOUND)
+```
+
+```{r}
+pred_df <- understand_predictions(data=train_strat_fifty, model = "logistic", 
+                       model_wkflow = logit_wkflow, num_splits = 5, bound = BOUND)
+# head(huh)
+fp_df <- pred_df %>%
+  filter(TARGET == 0 & vals == 1)
+
+head(fp_df)
+```
+
+#### 30/70 stratified splits
 
 ```{r}
 # then, create sets
