@@ -14,20 +14,38 @@ random_split <- function(df, train_prop = 0.7, val_prop = 0.1, seed = 123) {
   list(train = train, validation = val, test = test)
 }
 
-stratified_split <- function(df) {
-  n <- nrow(df)
+stratified_split <- function(df, target, train_prop = 0.70, val_prop = 0.10, seed = 123) {
+  set.seed(seed)
+  yquo <- rlang::enquo(target)
   
-  train_n <- floor(0.70 * n)
-  val_n <- floor(0.10 * n)
+  df %>%
+    mutate(.target = as.factor(!!yquo)) %>%
+    group_by(.target) %>%
+    group_split() %>%
+    lapply(function(d) {
+      n <- nrow(d)
+      n_train <- floor(train_prop * n)
+      n_val   <- floor(val_prop   * n)
+      idx <- sample.int(n)
+      list(
+        train = d[idx[1:n_train], ],
+        val   = d[idx[(n_train + 1):(n_train + n_val)], ],
+        test  = d[idx[(n_train + n_val + 1):n], ]
+      )
+    }) -> parts
   
-  train_idx <- sample(seq_len(n), train_n)
-  rest <- df[-train_idx, ]
+  out <- list(
+    train = bind_rows(lapply(parts, `[[`, "train")) %>% dplyr::select(-.target),
+    val   = bind_rows(lapply(parts, `[[`, "val"))   %>% dplyr::select(-.target),
+    test  = bind_rows(lapply(parts, `[[`, "test"))  %>% dplyr::select(-.target)
+  )
   
-  validation_idx <- sample(seq_len(nrow(rest)), val_n)
+  make_target_factor <- function(x) {
+    x %>% mutate(TARGET = factor(as.character(TARGET), levels = c("1","0")))
+  }
   
-  train <- df[train_idx, ]
-  val   <- rest[validation_idx, ]
-  test  <- rest[-validation_idx, ]
-  
-  list(train=train, val=val, test=test)
+  out$train <- make_target_factor(out$train)
+  out$val   <- make_target_factor(out$val)
+  out$test  <- make_target_factor(out$test)
+  out
 }
