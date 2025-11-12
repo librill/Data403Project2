@@ -1,5 +1,5 @@
 ---
-title: "Sampling"
+title: "Sampling"gt
 output: html_notebook
 ---
 
@@ -202,6 +202,7 @@ logit_wkflow <- workflow() |>
 cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = logit_wkflow,
                            num_splits = 5, no_class = 0, bound = 0.5)
 ```
+
 ```{r}
 lg_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING + DOCUMENTS_FLAGGED, data = train_random_fifty) |>
   step_mutate(TARGET = factor(TARGET)) |>
@@ -214,6 +215,7 @@ logit_wkflow <- workflow() |>
 cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = logit_wkflow,
                            num_splits = 5, no_class = 0, bound = 0.5)
 ```
+
 ```{r}
 lg_rec <- recipe(TARGET ~ DOCUMENTS_FLAGGED, data = train_random_fifty) |>
   step_mutate(TARGET = factor(TARGET)) |>
@@ -559,3 +561,186 @@ lda_wkflow <- workflow() |>
 cross_validation(data = train_random_fifty, model = "lda", model_wkflow = lda_wkflow,
                  num_splits = 5, no_class = 0, bound = 0.5)
 ```
+
+
+# ...
+## ... way down at the botton ...
+### Some sort of penalty, things like that (other stuff to get the model to work)
+
+
+```{r}
+# define model with penalty, or something
+logit_mod_lasso <- logistic_reg(mixture=1) |>
+  set_mode("classification") |>
+  set_engine("glm")
+```
+
+```{r}
+colnames(credit)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING + EDUCATION_TYPE_HIGHER + FAMILY_STATUS_MARRIED + CNT_CHILDREN, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod_lasso) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+ANOTHER THING THAT I CAN TRY IS MAKING THE INCOME COLLAPSE INTO CATEGORIES? 
+
+```{r}
+quantile_25 <- as.numeric(quantile(credit$AMT_INCOME_TOTAL)[2])
+quantile_50 <- as.numeric(quantile(credit$AMT_INCOME_TOTAL)[3])
+quantile_75 <- as.numeric(quantile(credit$AMT_INCOME_TOTAL)[4])
+quantile_25
+quantile_50
+quantile_75
+
+bottom <- 100000
+middle <- 150000
+top <- 250000
+```
+
+**try using income in categories, instead of just the value? that might help
+some things**
+
+```{r}
+credit <- credit |>
+  na.omit()
+
+credit_income_category <- credit %>%
+  mutate(
+    INCOME_CATEGORY = case_when(
+      AMT_INCOME_TOTAL < bottom ~ "FOURTH", 
+      AMT_INCOME_TOTAL > bottom & AMT_INCOME_TOTAL <= middle ~ "THIRD", 
+      AMT_INCOME_TOTAL > middle & AMT_INCOME_TOTAL <= top ~ "SECOND", 
+      AMT_INCOME_TOTAL > top ~ "FIRST"
+    )
+  ) %>% 
+  mutate(
+    INCOME_CLASS_FOURTH = ifelse(INCOME_CATEGORY == "FOURTH", 1, 0), 
+    INCOME_CLASS_THIRD = ifelse(INCOME_CATEGORY == "THIRD", 1, 0),
+    INCOME_CLASS_SECOND = ifelse(INCOME_CATEGORY == "SECOND", 1, 0),
+    INCOME_CLASS_FIRST = ifelse(INCOME_CATEGORY == "FIRST", 1, 0)
+  ) %>%
+  select (
+    SK_ID_CURR,
+    # CONTRACT_TYPE_CASH, 
+    CONTRACT_TYPE_REVOLVING, 
+    FLAG_OWN_CAR,
+    FLAG_OWN_REALTY,
+    CNT_CHILDREN,
+    # AMT_INCOME_TOTAL,
+    AMT_CREDIT,
+    AMT_ANNUITY,
+    AMT_GOODS_PRICE,
+    EDUCATION_TYPE_SECONDARY, 
+    EDUCATION_TYPE_HIGHER, 
+    # EDUCATION_TYPE_OTHER, 
+    FAMILY_STATUS_MARRIED, 
+    # FAMILY_STATUS_SINGLE, 
+    FAMILY_STATUS_OTHER, 
+    HOUSING_TYPE_OWN, 
+    HOUSING_TYPE_PARENTS, 
+    # HOUSING_TYPE_OTHER,
+    DAYS_EMPLOYED,
+    DOCUMENTS_FLAGGED,
+    INCOME_CLASS_FOURTH,
+    INCOME_CLASS_THIRD, 
+    INCOME_CLASS_SECOND,
+    TARGET
+  )
+
+credit_income_category <- credit_income_category |>
+  na.omit()
+
+# then change those into one-hot-encoded variables, or something like that
+```
+
+```{r}
+# --
+# now, try with the category data
+# --
+
+# undersample
+credit_income_fifty <- undersample_split(credit_income_category, 0.5)
+
+# then, create sets
+splits <- random_split(credit_income_fifty, train_prop = 0.7, val_prop = 0.1, seed = 123)
+train_random_income_fifty <- splits$train
+val_random_income_fifty <- splits$validation
+test_random_income_fifty <- splits$test
+```
+
+```{r}
+train_random_income_fifty[1:5, ]
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ DOCUMENTS_FLAGGED + CONTRACT_TYPE_REVOLVING, data = train_random_income_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_income_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+** maybe try ridge penalty instead? **
+
+```{r}
+# define model with penalty, or something
+logit_mod_ridge <- logistic_reg(mixture=0) |>
+  set_mode("classification") |>
+  set_engine("glm")
+```
+
+
+```{r}
+lg_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING + DOCUMENTS_FLAGGED, data = train_random_income_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod_lasso) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_income_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+## 60/40 split
+
+```{r}
+# undersample
+credit_sixty <- undersample_split(credit, 0.6)
+
+# then, create sets
+splits <- random_split(credit_sixty, train_prop = 0.7, val_prop = 0.1, seed = 123)
+train_random_sixty <- splits$train
+val_random_sixty <- splits$validation
+test_random_sixty <- splits$test
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ ., data = train_random_sixty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_sixty, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
