@@ -13,34 +13,33 @@ source(here::here("functions.R"))
 source(here::here("splits.R"))
 ```
 
+TODO: should this be removed so that we can include more data in our sets? 
+
 ```{r}
-# ---
-# creates undersampled dataframe
-# consumes dataframe, desired percent of positive class (1, in this case)
-# returns new dataframe with correct proportion of positive and negative classes
-# NOTE: we are assuming 'TARGET' is the response variable, values 0 and 1
-# ---
-
-undersample_split <- function(df, pct_positive = .5) {
-  # want to grab all positive, negative classes
-  df_positive <- df %>%
-    filter(TARGET == 1)
-  
-  df_negative <- df %>%
-    filter(TARGET == 0)
-  
-  # count how many postive, get correct proportion negative
-  num_pos <- nrow(df_positive)
-  num_neg <- floor(((1 - pct_positive) / pct_positive) * num_pos)
-  
-  # sample negative observations randomly
-  df_negative_sampled <- df_negative[sample(nrow(df_negative), num_neg, replace=FALSE), ]
-
-  # return combined dataframe
-  all_sampled <- rbind(df_positive, df_negative_sampled)
-  return(all_sampled)
-}
+credit <- credit |>
+  na.omit()
 ```
+
+**testing the stratified split**
+```{r}
+# then, create sets
+splits <- strat_split(credit, "TARGET", train_prop = 0.7, val_prop = 0.1, seed = 123)
+train_strat <- splits$train
+val_strat <- splits$val
+test_strat <- splits$test
+
+# show they are same proportion
+round(prop.table(table(credit$TARGET)), 3)
+round(prop.table(table(train_strat$TARGET)), 3)
+round(prop.table(table(val_strat$TARGET)), 3)
+round(prop.table(table(test_strat$TARGET)), 3)
+
+# show that they are same size
+nrow(train_strat) / nrow(credit)
+nrow(val_strat) / nrow(credit)
+nrow(test_strat) / nrow(credit)
+```
+
 
 ```{r}
 # names to choose from
@@ -58,10 +57,6 @@ logit_mod <- logistic_reg() |>
 
 ### "Natural" (No Undersampling)
 ```{r}
-# load data
-credit <- credit |>
-  na.omit()
-
 # then, create sets
 splits <- random_split(credit, train_prop = 0.7, val_prop = 0.1, seed = 123)
 train_random <- splits$train
@@ -72,8 +67,9 @@ test_random <- splits$test
 ```{r}
 lg_rec <- recipe(TARGET ~ ., data = train_random) |>
   step_mutate(TARGET = factor(TARGET)) |>
-  step_dummy(all_nominal_predictors())
-
+  step_naomit(all_predictors()) |>
+  step_dummy(all_nominal_predictors()) 
+               
 logit_wkflow <- workflow() |>
   add_model(logit_mod) |>
   add_recipe(lg_rec)
@@ -100,6 +96,8 @@ get anything even decent**
 
 ### 50/50 Split
 
+#### random split
+
 ```{r}
 # undersample
 credit_fifty <- undersample_split(credit, 0.5)
@@ -109,6 +107,22 @@ splits <- random_split(credit_fifty, train_prop = 0.7, val_prop = 0.1, seed = 12
 train_random_fifty <- splits$train
 val_random_fifty <- splits$validation
 test_random_fifty <- splits$test
+```
+
+```{r}
+nrow(train_random_fifty)
+
+# show they are same proportion
+round(prop.table(table(credit_fifty$TARGET)), 3)
+round(prop.table(table(train_random_fifty$TARGET)), 3)
+round(prop.table(table(val_random_fifty$TARGET)), 3)
+round(prop.table(table(test_random_fifty$TARGET)), 3)
+
+# show that they are same size
+nrow(train_random_fifty) / nrow(credit_fifty)
+nrow(val_random_fifty) / nrow(credit_fifty)
+nrow(test_random_fifty) / nrow(credit_fifty)
+
 ```
 
 ```{r}
@@ -127,6 +141,7 @@ cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = l
 ```{r}
 lg_rec <- recipe(TARGET ~ ., data = train_random_fifty) |>
   step_mutate(TARGET = factor(TARGET)) |>
+  step_naomit(all_predictors()) |>
   step_dummy(all_nominal_predictors())
 
 logit_wkflow <- workflow() |>
@@ -140,6 +155,7 @@ cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = l
 ```{r}
 lg_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING + AMT_CREDIT + AMT_INCOME_TOTAL + HOUSING_TYPE_OWN, data = train_random_fifty) |>
   step_mutate(TARGET = factor(TARGET)) |>
+  step_naomit(all_predictors()) |>
   step_dummy(all_nominal_predictors())
 
 logit_wkflow <- workflow() |>
@@ -153,6 +169,7 @@ cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = l
 ```{r}
 lg_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING, data = train_random_fifty) |>
   step_mutate(TARGET = factor(TARGET)) |>
+  step_naomit(all_predictors()) |>
   step_dummy(all_nominal_predictors())
 
 logit_wkflow <- workflow() |>
@@ -166,6 +183,7 @@ cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = l
 ```{r}
 lg_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING + EDUCATION_TYPE_SECONDARY, data = train_random_fifty) |>
   step_mutate(TARGET = factor(TARGET)) |>
+  step_naomit(all_predictors()) |>
   step_dummy(all_nominal_predictors())
 
 logit_wkflow <- workflow() |>
@@ -179,6 +197,7 @@ cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = l
 ```{r}
 lg_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING + CNT_CHILDREN, data = train_random_fifty) |>
   step_mutate(TARGET = factor(TARGET)) |>
+  step_naomit(all_predictors()) |>
   step_dummy(all_nominal_predictors())
 
 logit_wkflow <- workflow() |>
@@ -193,6 +212,7 @@ cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = l
 ```{r}
 lg_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING + HOUSING_TYPE_OWN, data = train_random_fifty) |>
   step_mutate(TARGET = factor(TARGET)) |>
+  step_naomit(all_predictors()) |>
   step_dummy(all_nominal_predictors())
 
 logit_wkflow <- workflow() |>
@@ -206,6 +226,7 @@ cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = l
 ```{r}
 lg_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING + DOCUMENTS_FLAGGED, data = train_random_fifty) |>
   step_mutate(TARGET = factor(TARGET)) |>
+  step_naomit(all_predictors()) |>
   step_dummy(all_nominal_predictors())
 
 logit_wkflow <- workflow() |>
@@ -219,6 +240,7 @@ cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = l
 ```{r}
 lg_rec <- recipe(TARGET ~ DOCUMENTS_FLAGGED, data = train_random_fifty) |>
   step_mutate(TARGET = factor(TARGET)) |>
+  step_naomit(all_predictors()) |>
   step_dummy(all_nominal_predictors())
 
 logit_wkflow <- workflow() |>
@@ -232,6 +254,7 @@ cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = l
 ```{r}
 lg_rec <- recipe(TARGET ~ CNT_CHILDREN, data = train_random_fifty) |>
   step_mutate(TARGET = factor(TARGET)) |>
+  step_naomit(all_predictors()) |>
   step_dummy(all_nominal_predictors())
 
 logit_wkflow <- workflow() |>
@@ -245,6 +268,7 @@ cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = l
 ```{r}
 lg_rec <- recipe(TARGET ~ AMT_CREDIT + AMT_ANNUITY + AMT_INCOME_TOTAL, data = train_random_fifty) |>
   step_mutate(TARGET = factor(TARGET)) |>
+  step_naomit(all_predictors()) |>
   step_dummy(all_nominal_predictors())
 
 logit_wkflow <- workflow() |>
@@ -258,6 +282,7 @@ cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = l
 ```{r}
 lg_rec <- recipe(TARGET ~ FLAG_OWN_CAR + FLAG_OWN_REALTY, data = train_random_fifty) |>
   step_mutate(TARGET = factor(TARGET)) |>
+  step_naomit(all_predictors()) |>
   step_dummy(all_nominal_predictors())
 
 logit_wkflow <- workflow() |>
@@ -267,6 +292,91 @@ logit_wkflow <- workflow() |>
 cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = logit_wkflow,
                            num_splits = 5, no_class = 0, bound = 0.5)
 ```
+
+#### stratified split
+
+**TODO: get this working**
+
+these are stratified splits created from the undersampled dataset, hoping to get
+some better results
+
+```{r}
+# then, create sets
+strat_splits_fifty <- strat_split(credit_fifty, "TARGET", train_prop = 0.7, val_prop = 0.1, seed = 123)
+train_strat_fifty <- strat_splits_fifty$train
+val_strat_fifty <- strat_splits_fifty$val
+test_strat_fifty <- strat_splits_fifty$test
+```
+
+
+```{r}
+nrow(train_strat_fifty)
+sum(rowSums(is.na(train_strat_fifty)) > 0)
+
+# show they are same proportion
+round(prop.table(table(credit_fifty$TARGET)), 3)
+round(prop.table(table(train_strat_fifty$TARGET)), 3)
+round(prop.table(table(val_strat_fifty$TARGET)), 3)
+round(prop.table(table(test_strat_fifty$TARGET)), 3)
+
+# show that they are same size
+nrow(train_strat_fifty) / nrow(credit_fifty)
+nrow(val_strat_fifty) / nrow(credit_fifty)
+nrow(test_strat_fifty) / nrow(credit_fifty)
+```
+
+
+**why is this giving me NAN ...?**
+
+```{r}
+lg_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec
+
+cross_validation(data = train_strat_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+
+```{r}
+# then, create sets
+strat_splits_thirty <- strat_split(credit_fifty, "TARGET", train_prop = 0.7, val_prop = 0.1, seed = 123)
+train_strat_thirty <- strat_splits_thirty$train
+val_strat_thirty <- strat_splits_thirty$val
+test_strat_thirty <- strat_splits_thirty$test
+```
+
+```{r}
+# then, create sets
+strat_splits <- strat_split(credit, "TARGET", train_prop = 0.7, val_prop = 0.1, seed = 123)
+train_strat <- strat_splits$train
+val_strat <- strat_splits$val
+test_strat <- strat_splits$test
+```
+
+# something is not good, have to figure out what that is...
+
+**getting NANs, could this haave to do with the data itself?**
+
+```{r}
+lg_rec <- recipe(TARGET ~ ., data = train_strat) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_strat, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+
+
 ### 30/70 Split
 
 ```{r}
@@ -288,6 +398,7 @@ test_random_thirty <- splits$test
 # now, try different variations of variables and stuff ..
 lg_rec <- recipe(TARGET ~ ., data = train_random_thirty) |>
   step_mutate(TARGET = factor(TARGET)) |>
+  step_naomit(all_predictors()) |>
   step_dummy(all_nominal_predictors())
 
 logit_wkflow <- workflow() |>
@@ -441,6 +552,7 @@ cross_validation(data = train_random, model = "lda", model_wkflow = lda_wkflow,
 ```{r}
 lda_rec <- recipe(TARGET ~ ., data = train_random_fifty) |>
   step_mutate(TARGET = factor(TARGET)) |>
+  step_naomit(all_predictors()) |>
   step_zv(all_predictors())
 
 lda_wkflow <- workflow() |>
@@ -461,6 +573,9 @@ lda_wkflow <- workflow() |>
   add_recipe(lda_rec)
 
 cross_validation(data = train_random_fifty, model = "lda", model_wkflow = lda_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+
+cross_validation(data = val_random_fifty, model = "lda", model_wkflow = lda_wkflow,
                  num_splits = 5, no_class = 0, bound = 0.5)
 ```
 
@@ -570,9 +685,9 @@ cross_validation(data = train_random_fifty, model = "lda", model_wkflow = lda_wk
 
 ```{r}
 # define model with penalty, or something
-logit_mod_lasso <- logistic_reg(mixture=1) |>
+logit_mod_lasso <- logistic_reg(penalty = 1, mixture=1) |>
   set_mode("classification") |>
-  set_engine("glm")
+  set_engine("glmnet")
 ```
 
 ```{r}
@@ -580,7 +695,7 @@ colnames(credit)
 ```
 
 ```{r}
-lg_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING + EDUCATION_TYPE_HIGHER + FAMILY_STATUS_MARRIED + CNT_CHILDREN, data = train_random_fifty) |>
+lg_rec <- recipe(TARGET ~ ., data = train_random_fifty) |>
   step_mutate(TARGET = factor(TARGET)) |>
   step_dummy(all_nominal_predictors())
 
@@ -718,21 +833,21 @@ cross_validation(data = train_random_income_fifty, model = "logistic", model_wkf
                  num_splits = 5, no_class = 0, bound = 0.5)
 ```
 
-## 60/40 split
+## 55/45 split
 
 ```{r}
 # undersample
-credit_sixty <- undersample_split(credit, 0.6)
+credit_five <- undersample_split(credit, 0.55)
 
 # then, create sets
-splits <- random_split(credit_sixty, train_prop = 0.7, val_prop = 0.1, seed = 123)
-train_random_sixty <- splits$train
-val_random_sixty <- splits$validation
-test_random_sixty <- splits$test
+splits <- random_split(credit_five, train_prop = 0.7, val_prop = 0.1, seed = 123)
+train_random_five <- splits$train
+val_random_five <- splits$validation
+test_random_five <- splits$test
 ```
 
 ```{r}
-lg_rec <- recipe(TARGET ~ ., data = train_random_sixty) |>
+lg_rec <- recipe(TARGET ~ ., data = train_random_five) |>
   step_mutate(TARGET = factor(TARGET)) |>
   step_dummy(all_nominal_predictors())
 
@@ -740,7 +855,48 @@ logit_wkflow <- workflow() |>
   add_model(logit_mod) |>
   add_recipe(lg_rec)
 
-cross_validation(data = train_random_sixty, model = "logistic", model_wkflow = logit_wkflow,
+cross_validation(data = train_random_five, model = "logistic", model_wkflow = logit_wkflow,
                  num_splits = 5, no_class = 0, bound = 0.5)
 ```
+
+## USING SOME MIXTURE COMBINATION
+
+
+```{r}
+lg_rec <- recipe(TARGET ~ ., data = train_random_five) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_five, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+# define model with penalty, or something
+logit_mod_mix_1 <- logistic_reg(penalty = .2, mixture=1) |>
+  set_mode("classification") |>
+  set_engine("glmnet")
+```
+
+```{r}
+colnames(credit)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ ., data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod_mix_1) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
 

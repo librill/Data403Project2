@@ -3,12 +3,13 @@
 # consumes observed and predicted values, ..., and decision boundary
 # returns metric
 # --
+head
 
 # TODO: add denom != 0 check
 
 calc_metrics <- function(observed, predicted, no_class, bound) {
   cm <- calc_confusion_matrix(observed, predicted, no_class, bound)
-  
+
   accuracy = (cm$TP + cm$TN) / (cm$TP + cm$TN + cm$FP + cm$FN)
   f1_score <- (2 * cm$TP) / ((2 * cm$TP) + cm$FP + cm$FN)
   precision <- cm$TP / (cm$TP + cm$FP)
@@ -80,7 +81,7 @@ cross_validation <- function(data, model, model_wkflow, num_splits, no_class, bo
                                       "Recall",
                                       "ROC-AUC"),
                            value = results)
-  
+
   return (df_results)
 }
 
