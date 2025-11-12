@@ -325,9 +325,6 @@ nrow(val_strat_fifty) / nrow(credit_fifty)
 nrow(test_strat_fifty) / nrow(credit_fifty)
 ```
 
-
-**why is this giving me NAN ...?**
-
 ```{r}
 lg_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
   step_mutate(TARGET = factor(TARGET)) |>
@@ -335,11 +332,36 @@ lg_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
 
 logit_wkflow <- workflow() |>
   add_model(logit_mod) |>
-  add_recipe(lg_rec
+  add_recipe(lg_rec)
 
 cross_validation(data = train_strat_fifty, model = "logistic", model_wkflow = logit_wkflow,
                            num_splits = 5, no_class = 0, bound = 0.5)
 ```
+
+TAKE A LOOK AT THE FALSE POSITIVES, SEE IF THERE IS ANYTHING THAT
+I CAN FIND
+
+```{r}
+
+pred_df <- understand_predictions(data=train_strat_fifty, model = "logistic", 
+                       model_wkflow = logit_wkflow, num_splits = 5)
+# head(huh)
+fp_df <- pred_df %>%
+  filter(TARGET == 0 & vals == 1)
+
+head(fp_df)
+```
+
+some thoughts after taking a look: 
+- almost all have CONTRACT_TYPE_REVOLVING = 0
+- almost all have DOCUMENTS_FLAGGED = 1
+- almost all have EDUCATION_TYPE_SECONDARY = 1
+
+should we control for those variables? at that point it feels that we are making
+our training/test/dev sets too small to be confident about their predictions ..
+
+is there other feature engineering that we could do? 
+should we combine with another dataset? 
 
 
 ```{r}
@@ -357,10 +379,6 @@ train_strat <- strat_splits$train
 val_strat <- strat_splits$val
 test_strat <- strat_splits$test
 ```
-
-# something is not good, have to figure out what that is...
-
-**getting NANs, could this haave to do with the data itself?**
 
 ```{r}
 lg_rec <- recipe(TARGET ~ ., data = train_strat) |>

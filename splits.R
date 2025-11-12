@@ -86,7 +86,6 @@ undersample_split <- function(df, pct_positive = .5) {
   return(all_sampled)
 }
 
-
 # --
 # *old* stratified split
 # --

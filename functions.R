@@ -3,7 +3,6 @@
 # consumes observed and predicted values, ..., and decision boundary
 # returns metric
 # --
-head
 
 # TODO: add denom != 0 check
 
@@ -43,6 +42,49 @@ calc_confusion_matrix <- function(observed, predicted, no_class, bound) {
 # returns metric average across k folds
 # NOTE: in data, y must be the last column
 # --
+
+# --
+# consumes dataframe, model, worfklow, and makes predictions
+# returns predictions combined with original dataframe to understand 
+# NOTE: just for one fold ...
+# characteristics in FALSE POSITIVES (getting a lot of those right now ..)
+# --
+understand_predictions <- function(data, model, model_wkflow, num_splits) {
+  set.seed(18938)
+  df_cvs <- vfold_cv(data, v = num_splits)
+  
+  metrics_total <- 0
+  
+  train_df <- analysis(df_cvs$splits[[1]])
+  test_df  <- assessment(df_cvs$splits[[1]])
+  
+  model_fit <- model_wkflow |>
+    fit(train_df) |>
+    extract_fit_parsnip()
+  
+  if (model == "svc") {
+    coefs <- tidy(model_fit)$estimate
+    predictors <- cbind(test_df[-ncol(test_df)], INTERCEPT = 1)
+    scores <- as.matrix(predictors) %*% coefs
+    score1 <- max(scores)
+    score0 <- min(scores)
+    preds <- if_else(scores <= 0,
+                     0.5 * ((scores - score0) / (-score0)),
+                     0.5 + (0.5 * (scores / score1)))
+  } else {
+    preds <- predict(model_fit, new_data = test_df, type = "prob")$.pred_1
+  }
+  
+  # get actual predictions, and values 0/1
+  test_df$preds <- round(preds, 2)
+  test_df$vals <- round(preds)
+  
+  return(test_df)
+}
+
+# TODO: how can we see the actual vs. predicted? could look at those in the 
+# context of the data to make a decision about what we want to do moving forward
+
 cross_validation <- function(data, model, model_wkflow, num_splits, no_class, bound) {
   set.seed(18938)
   df_cvs <- vfold_cv(data, v = num_splits)
@@ -130,7 +172,6 @@ calc_roc_auc <- function(observed, predicted, no_class, bounds) {
 # consumes protected class (vector from data), observed and predicted values, ..., and a decision boundary
 # returns fairness metrics
 # --
-
 calc_fairness_metrics <- function(protected_class, observed, pred_class, no_class, bound) {
   class_levels <- unique(protected_class)
   num_groups <- length(class_levels)
