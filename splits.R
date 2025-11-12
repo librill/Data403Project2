@@ -14,11 +14,15 @@ random_split <- function(df, train_prop = 0.7, val_prop = 0.1, seed = 123) {
   list(train = train, validation = val, test = test)
 }
 
+
 stratified_split <- function(df, target, train_prop = 0.70, val_prop = 0.10, seed = 123) {
-  set.seed(seed)
-  yquo <- rlang::enquo(target)
+  stopifnot(train_prop > 0, val_prop >= 0, train_prop + val_prop < 1)
   
-  df %>%
+  set.seed(seed)
+  yquo <- enquo(target)
+  yname <- as_name(yquo)
+  
+  parts <- df %>%
     mutate(.target = as.factor(!!yquo)) %>%
     group_by(.target) %>%
     group_split() %>%
@@ -26,26 +30,30 @@ stratified_split <- function(df, target, train_prop = 0.70, val_prop = 0.10, see
       n <- nrow(d)
       n_train <- floor(train_prop * n)
       n_val   <- floor(val_prop   * n)
+      if (n >= 3) {
+        n_train <- max(1, n_train)
+        n_val   <- max(0, min(n - 2, n_val))
+      }
       idx <- sample.int(n)
       list(
-        train = d[idx[1:n_train], ],
-        val   = d[idx[(n_train + 1):(n_train + n_val)], ],
-        test  = d[idx[(n_train + n_val + 1):n], ]
+        train = d[idx[1:n_train], , drop = FALSE],
+        val   = d[idx[(n_train + 1):(n_train + n_val)], , drop = FALSE],
+        test  = d[idx[(n_train + n_val + 1):n], , drop = FALSE]
       )
-    }) -> parts
+    })
   
-  out <- list(
-    train = bind_rows(lapply(parts, `[[`, "train")) %>% dplyr::select(-.target),
-    val   = bind_rows(lapply(parts, `[[`, "val"))   %>% dplyr::select(-.target),
-    test  = bind_rows(lapply(parts, `[[`, "test"))  %>% dplyr::select(-.target)
-  )
-  
-  make_target_factor <- function(x) {
-    x %>% mutate(TARGET = factor(as.character(TARGET), levels = c("1","0")))
+  bind_and_fix <- function(slot) {
+    out <- bind_rows(lapply(parts, `[[`, slot)) %>% dplyr::select(-.target)
+    out <- out %>%
+      mutate(!!yname := factor(as.character(!!yquo), levels = c("0","1"))) %>%
+      sample_frac(1) 
+    out
   }
   
-  out$train <- make_target_factor(out$train)
-  out$val   <- make_target_factor(out$val)
-  out$test  <- make_target_factor(out$test)
-  out
+  list(
+    train = bind_and_fix("train"),
+    val   = bind_and_fix("val"),
+    test  = bind_and_fix("test")
+  )
 }
+
