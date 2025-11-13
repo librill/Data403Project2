@@ -56,7 +56,7 @@ cross_validation(data = train_random, model = "logistic", model_wkflow = logit_w
                  no_class = 0, bound = 0.5)
 
 # Stratified Sample:
-splits <- stratified_split(all_credit, TARGET, train_prop = 0.7, val_prop = 0.10, seed = 123)
+splits <- strat_split(all_credit, TARGET, train_prop = 0.7, val_prop = 0.10, seed = 123)
 train_stratified <- splits$train
 val_stratified   <- splits$val
 test_stratified  <- splits$test
