@@ -137,11 +137,11 @@ lda_wkflow |>
 # --
 
 # NOTE: SVC only working on 10,000 rows ...
-svc_credit <- credit[1:500, ] |>
-  mutate(TARGET = if_else(TARGET == 0, -1, 1))
+svc_credit <- credit |>
+  mutate(TARGET = factor(if_else(TARGET == 0, -1, 1), levels = c(1, -1)))
 
 svc_rec_1 <- recipe(TARGET ~ ., data = svc_credit) |>
-  step_mutate(TARGET = factor(TARGET)) |>
+  #step_mutate(TARGET = factor(TARGET, levels = c(1, -1))) |>
   step_normalize(all_numeric_predictors()) |>
   step_zv(all_predictors())
 
