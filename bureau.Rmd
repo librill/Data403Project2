@@ -1,0 +1,152 @@
+---
+title: "bureau"
+output: html_document
+date: "2025-11-13"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Bureau
+
+this is where i am going to work on all of that stuff and whatnot, which 
+might be cool and things
+
+bringing in the data 
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(tidymodels)
+library(discrim)
+library(LiblineaR)
+
+source(here::here("data_cleaning.R"))
+source(here::here("functions.R"))
+source(here::here("splits.R"))
+```
+
+
+```{r}
+all_bureau <- read_csv(here::here("Data", "bureau.csv"))
+head(all_bureau)
+# DAYS_CREDIT
+# COUNT() of all the observations and whatnot
+```
+
+```{r}
+bureau_grouped <- all_bureau %>%
+  group_by(SK_ID_CURR) %>%
+  summarise(
+    NUM_CREDITS = n(), 
+    MEAN_DAYS_CREDIT = round(mean(abs(DAYS_CREDIT), na.rm = TRUE), 2)
+  )
+
+head(bureau_grouped)
+```
+
+```{r}
+# load dataframe
+all_credit <- read_csv(here::here("Data", "application_train.csv"))
+
+# option 1
+# aggregate documents flagged, one-hot-encode, and select columns
+# NOTE: some parts commented out to prevent collinearity
+credit <- all_credit %>%
+  mutate(TARGET = factor(TARGET, levels = c(0, 1))) %>%
+  mutate(
+    DOCUMENTS_FLAGGED = rowSums(dplyr::select(., starts_with("FLAG_DOCUMENT")))
+  ) %>%
+  mutate(
+    CONTRACT_TYPE_CASH = ifelse(NAME_CONTRACT_TYPE=="Cash loans", 1, 0),
+    CONTRACT_TYPE_REVOLVING = ifelse(NAME_CONTRACT_TYPE=="Revolving loans", 1, 0),
+    EDUCATION_TYPE_SECONDARY = ifelse(NAME_EDUCATION_TYPE=="Secondary / secondary special", 1, 0),
+    EDUCATION_TYPE_HIGHER = ifelse(NAME_EDUCATION_TYPE=="Higher education", 1, 0),
+    FAMILY_STATUS_MARRIED = ifelse(NAME_FAMILY_STATUS=="Married", 1, 0),
+    FAMILY_STATUS_OTHER = ifelse(!NAME_FAMILY_STATUS %in% c("Married", "Single / not married"), 1, 0),
+    HOUSING_TYPE_OWN = ifelse(NAME_HOUSING_TYPE=="House / apartment", 1, 0),
+    HOUSING_TYPE_PARENTS = ifelse(NAME_HOUSING_TYPE=="With parents", 1, 0),
+    FLAG_OWN_CAR = ifelse(FLAG_OWN_CAR =="Y", 1, 0),
+    FLAG_OWN_REALTY = ifelse(FLAG_OWN_REALTY=="Y", 1, 0)
+  ) %>%
+  dplyr::select(
+    SK_ID_CURR,
+    CONTRACT_TYPE_REVOLVING,
+    FLAG_OWN_CAR,
+    FLAG_OWN_REALTY,
+    CNT_CHILDREN,
+    AMT_INCOME_TOTAL,
+    AMT_CREDIT,
+    AMT_ANNUITY,
+    AMT_GOODS_PRICE,
+    EDUCATION_TYPE_SECONDARY,
+    EDUCATION_TYPE_HIGHER,
+    FAMILY_STATUS_MARRIED,
+    FAMILY_STATUS_OTHER,
+    HOUSING_TYPE_OWN,
+    HOUSING_TYPE_PARENTS,
+    DAYS_EMPLOYED,
+    DOCUMENTS_FLAGGED,
+    TARGET
+  )
+
+credit <- credit |>
+  na.omit()
+```
+
+```{r}
+head(credit)
+```
+
+```{r}
+the_merged <- left_join(credit, bureau_grouped, by="SK_ID_CURR") %>%
+  mutate(NUM_CREDITS = if_else(is.na(NUM_CREDITS), 0, NUM_CREDITS)) %>%
+  mutate(MEAN_DAYS_CREDIT = if_else(is.na(MEAN_DAYS_CREDIT), 0, MEAN_DAYS_CREDIT))
+
+the_merged <- as.data.frame(the_merged)
+
+# move 'TARGET' back to the end
+all_cols <- names(the_merged)
+remaining_cols <- all_cols[all_cols != "TARGET"]
+new_order <- c(remaining_cols, "TARGET")
+
+# apply the new order to the data frame
+merged_ordered <- the_merged[, new_order]
+         
+head(merged_ordered)
+```
+
+```{r}
+# then, create sets
+merged_fifty <- undersample_split(merged_ordered, 0.5)
+
+splits_fifty <- random_split(merged_fifty, train_prop = 0.7, val_prop = 0.1, seed = 123)
+train_strat_fifty <- splits_fifty$train
+val_strat_fifty <- splits_fifty$val
+test_strat_fifty <- splits_fifty$test
+
+```
+
+```{r}
+# define model (used for all)
+logit_mod <- logistic_reg() |>
+  set_mode("classification") |>
+  set_engine("glm")
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ MEAN_DAYS_CREDIT + NUM_CREDITS + CONTRACT_TYPE_REVOLVING, data = train_strat_fifty) |>
+  step_mutate(TARGET = factor(TARGET, levels=c(1, 0))) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+set.seed(18938)
+cvs <- vfold_cv(train_strat_fifty, v = 5)
+logit_wkflow |>
+  fit_resamples(resamples = cvs, metrics = metric_set(accuracy, f_meas, precision, recall, roc_auc)) |>
+  collect_metrics()
+```
