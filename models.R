@@ -55,36 +55,49 @@ val_random <- val_random |>
 cross_validation(data = train_random, model = "logistic", model_wkflow = logit_wkflow, num_splits = 5,
                  no_class = 0, bound = 0.5)
 
+
+credit_fifty <- undersample_split(credit)
+
 # Stratified Sample:
-# splits <- strat_split(all_credit, "TARGET", train_prop = 0.7, val_prop = 0.10, seed = 123)
+splits <- strat_split(credit_fifty, "TARGET", train_prop = 0.7, val_prop = 0.10, seed = 123)
 # train_stratified <- splits$train |> dplyr::mutate(TARGET = factor(TARGET, levels = c(0,1)))
 # val_stratified   <- splits$val |> dplyr::mutate(TARGET = factor(TARGET, levels = c(0,1)))
 # test_stratified  <- splits$test |> dplyr::mutate(TARGET = factor(TARGET, levels = c(0,1)))
-# 
+
+train_stratified <- splits$train
+val_stratified <- splits$val
+test_stratified <- splits$test
+
+# yours
 # lg_rec_1 <- recipe(TARGET ~ ., data = train_stratified) |>
-#   step_mutate(across(where(is.character), as.factor)) |>  
+#   step_mutate(across(where(is.character), as.factor)) |>
 #   step_naomit(all_predictors()) |>
-#   step_zv(all_predictors()) |>                            
+#   step_zv(all_predictors()) |>
 #   step_dummy(all_nominal_predictors())
-# 
-# logit_mod <- logistic_reg() |>
-#   set_mode("classification") |>
-#   set_engine("glm")
-# 
-# logit_wkflow <- workflow() |>
-#   add_model(logit_mod) |>
-#   add_recipe(lg_rec_1)
-# 
-# results <- cross_validation(
-#   data = train_stratified,
-#   model = "logistic",
-#   model_wkflow = logit_wkflow,
-#   num_splits = 5,
-#   no_class = 0,
-#   bound = 0.5
-# )
-# 
-# results
+
+# mine
+lg_rec_1 <- recipe(TARGET ~ ., data = train_stratified) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_mod <- logistic_reg() |>
+  set_mode("classification") |>
+  set_engine("glm")
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec_1)
+
+results <- cross_validation(
+  data = train_stratified,
+  model = "logistic",
+  model_wkflow = logit_wkflow,
+  num_splits = 5,
+  no_class = 0,
+  bound = 0.5
+)
+
+results
 
 set.seed(18938)
 cvs <- vfold_cv(credit, v = 5)
