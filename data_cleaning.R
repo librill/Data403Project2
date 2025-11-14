@@ -47,6 +47,8 @@ credit <- all_credit %>%
     DAYS_EMPLOYED,
     DOCUMENTS_FLAGGED,
     REGION_POPULATION_RELATIVE,
+    INCOME_TO_CREDIT,
+    INCOME_TO_REGION,
     TARGET
   )
 
