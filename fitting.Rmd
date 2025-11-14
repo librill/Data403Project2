@@ -341,7 +341,7 @@ cross_validation(data = train_strat_fifty, model = "logistic", model_wkflow = lo
 # I CAN FIND
 
 pred_df <- understand_predictions(data=train_strat_fifty, model = "logistic", 
-                       model_wkflow = logit_wkflow, num_splits = 5)
+                       model_wkflow = logit_wkflow, num_splits = 5, bound = 0.5)
 # head(huh)
 fp_df <- pred_df %>%
   filter(TARGET == 0 & vals == 1)
@@ -452,15 +452,7 @@ test_strat_thirty <- strat_splits_thirty$test
 ```
 
 ```{r}
-# then, create sets
-strat_splits <- strat_split(credit, "TARGET", train_prop = 0.7, val_prop = 0.1, seed = 123)
-train_strat <- strat_splits$train
-val_strat <- strat_splits$val
-test_strat <- strat_splits$test
-```
-
-```{r}
-lg_rec <- recipe(TARGET ~ ., data = train_strat) |>
+lg_rec <- recipe(TARGET ~ ., data = train_strat_thirty) |>
   step_mutate(TARGET = factor(TARGET)) |>
   step_dummy(all_nominal_predictors())
 
@@ -468,7 +460,7 @@ logit_wkflow <- workflow() |>
   add_model(logit_mod) |>
   add_recipe(lg_rec)
 
-cross_validation(data = train_strat, model = "logistic", model_wkflow = logit_wkflow,
+cross_validation(data = train_strat_thirty, model = "logistic", model_wkflow = logit_wkflow,
                  num_splits = 5, no_class = 0, bound = 0.5)
 ```
 

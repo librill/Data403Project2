@@ -24,6 +24,10 @@ credit <- all_credit %>%
     FLAG_OWN_CAR = ifelse(FLAG_OWN_CAR =="Y", 1, 0),
     FLAG_OWN_REALTY = ifelse(FLAG_OWN_REALTY=="Y", 1, 0)
   ) %>%
+  mutate (
+    INCOME_TO_CREDIT = round(AMT_INCOME_TOTAL / AMT_CREDIT, 2),
+    INCOME_TO_REGION = round(AMT_INCOME_TOTAL / REGION_POPULATION_RELATIVE, 2)
+  ) %>% 
   dplyr::select(
     SK_ID_CURR,
     CONTRACT_TYPE_REVOLVING,
@@ -42,7 +46,9 @@ credit <- all_credit %>%
     HOUSING_TYPE_PARENTS,
     DAYS_EMPLOYED,
     DOCUMENTS_FLAGGED,
+    REGION_POPULATION_RELATIVE,
     TARGET
   )
+
 
 

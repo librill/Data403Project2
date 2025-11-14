@@ -50,6 +50,13 @@ head(bureau_grouped)
 # load dataframe
 all_credit <- read_csv(here::here("Data", "application_train.csv"))
 
+# for determining income categories
+
+bottom <- 100000
+middle <- 150000
+top <- 250000
+
+
 # option 1
 # aggregate documents flagged, one-hot-encode, and select columns
 # NOTE: some parts commented out to prevent collinearity
@@ -70,6 +77,20 @@ credit <- all_credit %>%
     FLAG_OWN_CAR = ifelse(FLAG_OWN_CAR =="Y", 1, 0),
     FLAG_OWN_REALTY = ifelse(FLAG_OWN_REALTY=="Y", 1, 0)
   ) %>%
+    mutate(
+    INCOME_CATEGORY = case_when(
+      AMT_INCOME_TOTAL < bottom ~ "FOURTH", 
+      AMT_INCOME_TOTAL > bottom & AMT_INCOME_TOTAL <= middle ~ "THIRD", 
+      AMT_INCOME_TOTAL > middle & AMT_INCOME_TOTAL <= top ~ "SECOND", 
+      AMT_INCOME_TOTAL > top ~ "FIRST"
+    )
+  ) %>% 
+   mutate(
+    INCOME_CLASS_FOURTH = ifelse(INCOME_CATEGORY == "FOURTH", 1, 0), 
+    INCOME_CLASS_THIRD = ifelse(INCOME_CATEGORY == "THIRD", 1, 0),
+    INCOME_CLASS_SECOND = ifelse(INCOME_CATEGORY == "SECOND", 1, 0),
+    INCOME_CLASS_FIRST = ifelse(INCOME_CATEGORY == "FIRST", 1, 0)
+  ) %>%
   dplyr::select(
     SK_ID_CURR,
     CONTRACT_TYPE_REVOLVING,
@@ -88,8 +109,18 @@ credit <- all_credit %>%
     HOUSING_TYPE_PARENTS,
     DAYS_EMPLOYED,
     DOCUMENTS_FLAGGED,
+    INCOME_CLASS_FOURTH,
+    INCOME_CLASS_THIRD, 
+    INCOME_CLASS_SECOND,
+    REGION_POPULATION_RELATIVE,
     TARGET
   )
+
+quantile_25 <- as.numeric(quantile(credit$AMT_INCOME_TOTAL)[2])
+quantile_50 <- as.numeric(quantile(credit$AMT_INCOME_TOTAL)[3])
+quantile_75 <- as.numeric(quantile(credit$AMT_INCOME_TOTAL)[4])
+
+
 
 credit <- credit |>
   na.omit()
@@ -101,8 +132,13 @@ head(credit)
 
 ```{r}
 the_merged <- left_join(credit, bureau_grouped, by="SK_ID_CURR") %>%
-  mutate(NUM_CREDITS = if_else(is.na(NUM_CREDITS), 0, NUM_CREDITS)) %>%
-  mutate(MEAN_DAYS_CREDIT = if_else(is.na(MEAN_DAYS_CREDIT), 0, MEAN_DAYS_CREDIT))
+  mutate(
+    NUM_CREDITS = if_else(is.na(NUM_CREDITS), 0, NUM_CREDITS),
+    MEAN_DAYS_CREDIT = if_else(is.na(MEAN_DAYS_CREDIT), 0, MEAN_DAYS_CREDIT),
+    INCOME_TO_CREDIT = round(credit$AMT_INCOME_TOTAL / credit$AMT_CREDIT, 2),
+    CREDIT_TO_NUM_CREDITS = round(NUM_CREDITS / credit$AMT_CREDIT, 2), 
+    INCOME_TO_REGION = round(credit$AMT_INCOME_TOTAL / credit$REGION_POPULATION_RELATIVE, 2)
+      )
 
 the_merged <- as.data.frame(the_merged)
 
@@ -121,7 +157,7 @@ head(merged_ordered)
 # then, create sets
 merged_fifty <- undersample_split(merged_ordered, 0.5)
 
-splits_fifty <- random_split(merged_fifty, train_prop = 0.7, val_prop = 0.1, seed = 123)
+splits_fifty <- strat_split(merged_fifty, target="TARGET", train_prop = 0.7, val_prop = 0.1, seed = 123)
 train_strat_fifty <- splits_fifty$train
 val_strat_fifty <- splits_fifty$val
 test_strat_fifty <- splits_fifty$test
@@ -136,8 +172,13 @@ logit_mod <- logistic_reg() |>
 ```
 
 ```{r}
-lg_rec <- recipe(TARGET ~ MEAN_DAYS_CREDIT + NUM_CREDITS + CONTRACT_TYPE_REVOLVING, data = train_strat_fifty) |>
-  step_mutate(TARGET = factor(TARGET, levels=c(1, 0))) |>
+colnames(train_strat_fifty)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ NUM_CREDITS + INCOME_TO_REGION, data = train_strat_fifty) |>
+  # step_rm("SK_ID_CURR") |>
+  step_mutate(TARGET = factor(TARGET, levels=c(0, 1))) |>
   step_dummy(all_nominal_predictors())
 
 logit_wkflow <- workflow() |>
@@ -149,4 +190,36 @@ cvs <- vfold_cv(train_strat_fifty, v = 5)
 logit_wkflow |>
   fit_resamples(resamples = cvs, metrics = metric_set(accuracy, f_meas, precision, recall, roc_auc)) |>
   collect_metrics()
+```
+
+
+```{r}
+# define model (used for all)
+lda_mod <- discrim_linear() |>
+  set_mode("classification") |>
+  set_engine("MASS")
+```
+
+### "Natural" Split
+
+```{r}
+lda_rec <- recipe(TARGET ~ AMT_CREDIT + AMT_ANNUITY + AMT_GOODS_PRICE, data = train_strat_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_zv(all_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+lda_wkflow |>
+  fit_resamples(resamples = cvs, metrics = metric_set(accuracy, f_meas, precision, recall, roc_auc)) |>
+  collect_metrics()
+```
+
+```{r}
+
+credit_all <- read_csv(here::here("Data", "application_train.csv"))
+
+head(credit_all)
+
 ```
