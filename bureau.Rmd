@@ -72,7 +72,7 @@ credit <- all_credit %>%
     EDUCATION_TYPE_SECONDARY = ifelse(NAME_EDUCATION_TYPE=="Secondary / secondary special", 1, 0),
     EDUCATION_TYPE_HIGHER = ifelse(NAME_EDUCATION_TYPE=="Higher education", 1, 0),
     FAMILY_STATUS_MARRIED = ifelse(NAME_FAMILY_STATUS=="Married", 1, 0),
-    FAMILY_STATUS_OTHER = ifelse(!NAME_FAMILY_STATUS %in% c("Married", "Single / not married"), 1, 0),
+    FAMILY_STATUS_SINGLE = ifelse(!NAME_FAMILY_STATUS == "Single / not married", 1, 0),
     HOUSING_TYPE_OWN = ifelse(NAME_HOUSING_TYPE=="House / apartment", 1, 0),
     HOUSING_TYPE_PARENTS = ifelse(NAME_HOUSING_TYPE=="With parents", 1, 0),
     FLAG_OWN_CAR = ifelse(FLAG_OWN_CAR =="Y", 1, 0),
@@ -111,7 +111,7 @@ credit <- all_credit %>%
     EDUCATION_TYPE_SECONDARY,
     EDUCATION_TYPE_HIGHER,
     FAMILY_STATUS_MARRIED,
-    FAMILY_STATUS_OTHER,
+    FAMILY_STATUS_SINGLE,
     HOUSING_TYPE_OWN,
     HOUSING_TYPE_PARENTS,
     DAYS_EMPLOYED,
@@ -423,44 +423,43 @@ library(ggplot2)
 library(tidyr)
 
 selected_vars <- c(
-  "EDUCATION_TYPE_HIGHER",
-  "FAMILY_STATUS_MARRIED",
   "HOUSING_TYPE_OWN",
-  "FLAG_OWN_CAR"
+  "FLAG_OWN_CAR",
+  "FAMILY_STATUS_MARRIED",
+  "EDUCATION_TYPE_HIGHER"
 )
 
 plot_df <- merged_ordered |>
-  dplyr::select(TARGET, dplyr::all_of(selected_vars)) |>
-  dplyr::mutate(
-    TARGET = factor(TARGET, levels = c(0, 1),
-                    labels = c("No Default", "Default"))
-  ) |>
-  tidyr::pivot_longer(
-    cols = dplyr::all_of(selected_vars),
-    names_to  = "predictor",
-    values_to = "value"
-  ) |>
+  dplyr::select(TARGET, HOUSING_TYPE_OWN, FLAG_OWN_CAR, FAMILY_STATUS_MARRIED,
+                EDUCATION_TYPE_HIGHER) |>
+  dplyr::mutate(TARGET = factor(TARGET, levels = c(0, 1),
+                                labels = c("No issues",
+                                           "Struggled with payments"))) |>
+  tidyr::pivot_longer(cols = dplyr::all_of(selected_vars),
+                      names_to  = "predictor",
+                      values_to = "value") |>
+  dplyr::mutate(predictor = factor(predictor, levels = c("HOUSING_TYPE_OWN",
+                                                         "FAMILY_STATUS_MARRIED",
+                                                         "FLAG_OWN_CAR",
+                                                         "EDUCATION_TYPE_HIGHER"),
+                                   labels = c("Owns Housing", "Married",
+                                              "Owns Car",
+                                              "Higher Education"))) |>
   dplyr::group_by(TARGET, predictor) |>
-  dplyr::summarise(
-    prop = mean(value, na.rm = TRUE),
-    .groups = "drop"
-  )
+  dplyr::summarise(prop = mean(value, na.rm = TRUE), .groups = "drop")
 
 ggplot(plot_df, aes(x = predictor, y = prop, fill = TARGET)) +
   geom_col(position = "dodge") +
   coord_flip() +
   scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-  scale_fill_manual(
-    values = c(
-      "No Default" = "#3663df",
-      "Default" = "#80b6fa"
-    )
-  ) +
+  scale_fill_manual(values = c("Struggled with payments" = "#3663df",
+                               "No issues" = "#80b6fa"),
+                    breaks = c("Struggled with payments", "No issues")) +
   labs(
-    title = "Proportion with Feature = 1 by TARGET",
+    title = "Predictor Proportions by Target",
     x = "Predictor",
     y = "Proportion",
-    fill = "TARGET"
+    fill = "Target"
   ) +
   theme_minimal()
 
