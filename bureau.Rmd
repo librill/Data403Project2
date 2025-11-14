@@ -63,7 +63,8 @@ top <- 250000
 credit <- all_credit %>%
   mutate(TARGET = factor(TARGET, levels = c(0, 1))) %>%
   mutate(
-    DOCUMENTS_FLAGGED = rowSums(dplyr::select(., starts_with("FLAG_DOCUMENT")))
+    DOCUMENTS_FLAGGED = rowSums(dplyr::select(., starts_with("FLAG_DOCUMENT"))),
+    DAYS_BIRTH = abs(DAYS_BIRTH)
   ) %>%
   mutate(
     CONTRACT_TYPE_CASH = ifelse(NAME_CONTRACT_TYPE=="Cash loans", 1, 0),
@@ -75,7 +76,8 @@ credit <- all_credit %>%
     HOUSING_TYPE_OWN = ifelse(NAME_HOUSING_TYPE=="House / apartment", 1, 0),
     HOUSING_TYPE_PARENTS = ifelse(NAME_HOUSING_TYPE=="With parents", 1, 0),
     FLAG_OWN_CAR = ifelse(FLAG_OWN_CAR =="Y", 1, 0),
-    FLAG_OWN_REALTY = ifelse(FLAG_OWN_REALTY=="Y", 1, 0)
+    FLAG_OWN_REALTY = ifelse(FLAG_OWN_REALTY=="Y", 1, 0)#,
+    #CODE_GENDER = ifelse(CODE_GENDER=="F", 1, 0)
   ) %>%
     mutate(
     INCOME_CATEGORY = case_when(
@@ -113,13 +115,13 @@ credit <- all_credit %>%
     INCOME_CLASS_THIRD, 
     INCOME_CLASS_SECOND,
     REGION_POPULATION_RELATIVE,
+    CODE_GENDER,
     TARGET
   )
 
 quantile_25 <- as.numeric(quantile(credit$AMT_INCOME_TOTAL)[2])
 quantile_50 <- as.numeric(quantile(credit$AMT_INCOME_TOTAL)[3])
 quantile_75 <- as.numeric(quantile(credit$AMT_INCOME_TOTAL)[4])
-
 
 
 credit <- credit |>
@@ -176,8 +178,22 @@ colnames(train_strat_fifty)
 ```
 
 ```{r}
-lg_rec <- recipe(TARGET ~ NUM_CREDITS + INCOME_TO_REGION, data = train_strat_fifty) |>
-  # step_rm("SK_ID_CURR") |>
+lg_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
+  step_rm("SK_ID_CURR") |>
+  step_rm("AMT_INCOME_TOTAL") |> 
+  step_rm("REGION_POPULATION_RELATIVE") |>
+  step_rm("INCOME_TO_CREDIT") |>
+  step_rm("CNT_CHILDREN") |>
+  step_rm("INCOME_CLASS_FOURTH") |>
+  step_rm("INCOME_CLASS_THIRD") |>
+  step_rm("INCOME_CLASS_SECOND") |>
+  step_rm("CODE_GENDER") |>
+  # step_rm("FAMILY_STATUS_MARRIED") |>
+  # step_rm("FAMILY_STATUS_OTHER") |>
+  step_rm("CONTRACT_TYPE_REVOLVING") |>
+  # step_rm("DAYS_EMPLOYED") |>
+  # step_rm("INCOME_TO_REGION") |>
+  # step_rm("CREDIT_TO_NUM_CREDITS") |>
   step_mutate(TARGET = factor(TARGET, levels=c(0, 1))) |>
   step_dummy(all_nominal_predictors())
 
@@ -191,7 +207,104 @@ logit_wkflow |>
   fit_resamples(resamples = cvs, metrics = metric_set(accuracy, f_meas, precision, recall, roc_auc)) |>
   collect_metrics()
 ```
+```{r}
+cross_validation(data = train_strat_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
 
+```{r}
+
+splits <- random_split(merged_fifty, train_prop = 0.7, val_prop = 0.1, seed = 123)
+train_strat <- splits$train
+val_strat <- splits$val
+test_strat <- splits$test
+
+lg_rec <- recipe(TARGET ~ ., data = train_strat) |>
+  step_rm("SK_ID_CURR") |>
+   step_rm("AMT_INCOME_TOTAL") |> 
+  step_rm("REGION_POPULATION_RELATIVE") |>
+  step_mutate(TARGET = factor(TARGET, levels=c(0, 1))) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+set.seed(18938)
+cvs <- vfold_cv(train_strat, v = 5)
+# logit_wkflow |>
+#   fit_resamples(resamples = cvs, metrics = metric_set(accuracy, f_meas, precision, recall, roc_auc)) |>
+#   collect_metrics()
+
+cross_validation(data = train_strat, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.505)
+
+understand_predictions(data = train_strat, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, bound = 0.505)
+# data, model, model_wkflow, num_splits, bound)
+```
+## TRYING A 30/70 SPLIT (CAN WE JUSTIFY?)
+
+```{r}
+colnames(merged_ordered)
+```
+
+```{r}
+# merged_fifty <- undersample_split(merged_ordered, 0.45)
+splits <- strat_split(merged_ordered, target = "TARGET", train_prop = .6, val_prop = 0.2, seed = 123)
+# undersample the training, not the val and test
+train_strat <- undersample_split(splits$train, 0.5)
+val_strat <- splits$val
+test_strat <- splits$test
+
+lg_rec <- recipe(TARGET ~ ., data = train_strat) |>
+  step_rm("SK_ID_CURR") |>
+  step_rm("AMT_INCOME_TOTAL") |> 
+  step_rm("REGION_POPULATION_RELATIVE") |>
+  step_rm("INCOME_TO_CREDIT") |>
+  step_rm("CNT_CHILDREN") |>
+  step_rm("CONTRACT_TYPE_REVOLVING") |>
+  step_rm("INCOME_CLASS_FOURTH") |>
+  step_rm("INCOME_CLASS_THIRD") |>
+  step_rm("INCOME_CLASS_SECOND") |>
+  step_rm("CODE_GENDER") |>
+  step_mutate(TARGET = factor(TARGET, levels=c(0, 1))) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_strat, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+
+l_fit <- logit_wkflow |>
+  fit(train_strat) |>
+  extract_fit_parsnip()
+
+preds <- predict(l_fit, new_data = test_strat)$.pred_class
+
+test_strat |>
+  mutate(predictions = preds) |>
+  precision(truth = TARGET, estimate = predictions)
+
+test_strat |>
+  mutate(predictions = preds) |>
+  recall(truth = TARGET, estimate = predictions)
+```
+```{r}
+test_strat$CODE_GENDER
+test_strat$TARGET
+```
+
+```{r}
+calc_fairness_metrics(test_strat$CODE_GENDER, as.numeric(as.character(test_strat$TARGET)), as.numeric(as.character(preds)), no_class = 0)
+```
+
+```{r}
+cross_validation(data = val_strat, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
 
 ```{r}
 # define model (used for all)
@@ -200,26 +313,64 @@ lda_mod <- discrim_linear() |>
   set_engine("MASS")
 ```
 
-### "Natural" Split
-
 ```{r}
-lda_rec <- recipe(TARGET ~ AMT_CREDIT + AMT_ANNUITY + AMT_GOODS_PRICE, data = train_strat_fifty) |>
-  step_mutate(TARGET = factor(TARGET)) |>
-  step_zv(all_predictors())
+merged_ordered_test <- merged_ordered |>
+  select(-c("SK_ID_CURR", "AMT_INCOME_TOTAL", "REGION_POPULATION_RELATIVE", "INCOME_TO_CREDIT", "CNT_CHILDREN",
+            "CONTRACT_TYPE_REVOLVING", "INCOME_CLASS_FOURTH", "INCOME_CLASS_THIRD", "INCOME_CLASS_SECOND", "CODE_GENDER"))
 
-lda_wkflow <- workflow() |>
-  add_model(lda_mod) |>
-  add_recipe(lda_rec)
+# merged_fifty <- undersample_split(merged_ordered, 0.45)
+splits <- strat_split(merged_ordered_test, target = "TARGET", train_prop = .6, val_prop = 0.2, seed = 123)
+# undersample the training, not the val and test
+train_strat <- undersample_split(splits$train, 0.5)
+val_strat <- splits$val
+test_strat <- splits$test
 
-lda_wkflow |>
-  fit_resamples(resamples = cvs, metrics = metric_set(accuracy, f_meas, precision, recall, roc_auc)) |>
-  collect_metrics()
+train_strat <- train_strat |>
+  mutate(TARGET = if_else(TARGET == 0, -1, 1))
+
+svc_rec <- recipe(TARGET ~ ., data = train_strat) |>
+  #step_rm("SK_ID_CURR") |>
+  # step_rm("AMT_INCOME_TOTAL") |> 
+  # step_rm("REGION_POPULATION_RELATIVE") |>
+  # step_rm("INCOME_TO_CREDIT") |>
+  # step_rm("CNT_CHILDREN") |>
+  # step_rm("CONTRACT_TYPE_REVOLVING") |>
+  # step_rm("INCOME_CLASS_FOURTH") |>
+  # step_rm("INCOME_CLASS_THIRD") |>
+  # step_rm("INCOME_CLASS_SECOND") |>
+  # step_rm("CODE_GENDER") |>
+  step_mutate(TARGET = factor(TARGET, levels=c(-1, 1))) |>
+  step_dummy(all_nominal_predictors())
+
+svc_mod <- svm_linear() |>
+  set_mode("classification") |>
+  set_engine("LiblineaR")
+
+svc_wkflow <- workflow() |>
+  add_model(svc_mod) |>
+  add_recipe(svc_rec)
+
+train_strat_test <- train_strat |>
+  select(-c("SK_ID_CURR", "AMT_INCOME_TOTAL", "REGION_POPULATION_RELATIVE", "INCOME_TO_CREDIT", "CNT_CHILDREN",
+            "CONTRACT_TYPE_REVOLVING", "INCOME_CLASS_FOURTH", "INCOME_CLASS_THIRD", "INCOME_CLASS_SECOND", "CODE_GENDER"))
+
+cross_validation(data = train_strat, model = "svc", model_wkflow = svc_wkflow,
+                 num_splits = 5, no_class = -1, bound = 0.5)
+
+l_fit <- logit_wkflow |>
+  fit(train_strat) |>
+  extract_fit_parsnip()
+
+preds <- predict(l_fit, new_data = test_strat)$.pred_class
+
+test_strat |>
+  mutate(predictions = preds) |>
+  precision(truth = TARGET, estimate = predictions)
+
+test_strat |>
+  mutate(predictions = preds) |>
+  recall(truth = TARGET, estimate = predictions)
 ```
 
-```{r}
+## Moving to the Test and Training Sets
 
-credit_all <- read_csv(here::here("Data", "application_train.csv"))
-
-head(credit_all)
-
-```
