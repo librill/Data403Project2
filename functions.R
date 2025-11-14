@@ -28,10 +28,10 @@ calc_metrics <- function(observed, predicted, no_class, bound) {
 # --
 calc_confusion_matrix <- function(observed, predicted, no_class, bound) {
   pred_class <- if_else(predicted > bound, 1, no_class)
-  TP <- sum(pred_class == 1 & observed == 1)
-  TN <- sum(pred_class == no_class & observed == no_class)
-  FP <- sum(pred_class == 1 & observed == no_class)
-  FN <- sum(pred_class == no_class & observed == 1)
+  TP <- sum(pred_class == no_class & observed == no_class)
+  TN <- sum(pred_class == 1 & observed == 1)
+  FP <- sum(pred_class == no_class & observed == 1)
+  FN <- sum(pred_class == 1 & observed == no_class)
   
   return(list(TP = TP, TN = TN, FP = FP, FN = FN))
 }
