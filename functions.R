@@ -172,7 +172,7 @@ calc_roc_auc <- function(observed, predicted, no_class, bounds) {
 # consumes protected class (vector from data), observed and predicted values, ..., and a decision boundary
 # returns fairness metrics
 # --
-calc_fairness_metrics <- function(protected_class, observed, pred_class, no_class, bound) {
+calc_fairness_metrics <- function(protected_class, observed, pred_class, no_class) {
   class_levels <- unique(protected_class)
   num_groups <- length(class_levels)
   
@@ -184,11 +184,22 @@ calc_fairness_metrics <- function(protected_class, observed, pred_class, no_clas
   error_rates <- c()
   
   for (i in 1:num_groups) {
-    include <- protected_class == class_levels[i]
-    cm <- calc_confusion_matrix(observed[include], pred_class[include], no_class, bound)
-    positive_predictions[i] <- (cm$TP + cm$FP) / (cm$TP + cm$TN + cm$FP + cm$FN)
-    recalls[i] <- cm$TP / (cm$TP + cm$FN)
-    error_rates[i] <- cm$FP / (cm$TN + cm$FP)
+    
+    include <- (protected_class == class_levels[i])
+    
+    TP <- sum((pred_class[include] == no_class) & (observed[include] == no_class))
+    TN <- sum((pred_class[include] == 1) & (observed[include] == 1))
+    FP <- sum((pred_class[include] == no_class) & (observed[include] == 1))
+    FN <- sum((pred_class[include] == 1) & (observed[include] == no_class))
+    
+    print(TP)
+    print(TN)
+    print(FP)
+    print(FN)
+    
+    positive_predictions[i] <- (TP + FP) / (TP + TN + FP + FN)
+    recalls[i] <- TP / (TP + FN)
+    error_rates[i] <- FP / (TN + FP)
   }
   
   result <- data.frame(class_levels = class_levels,
