@@ -389,4 +389,108 @@ test_strat |>
 ```
 
 ## Moving to the Test and Training Sets
+```{r}
+test_eval <- test_strat |>
+  mutate(
+    TARGET = factor(TARGET, levels = c(0, 1)),   # 1 = default (event)
+    predictions = preds
+  )
+
+```
+
+# Visualization Possibility 1: Confusion Matrix
+
+```{r}
+library(yardstick)
+library(ggplot2)
+
+cm <- conf_mat(test_eval, truth = TARGET, estimate = predictions)
+
+autoplot(cm, type = "heatmap") +
+  scale_fill_gradient(low = "white", high = "steelblue") +
+  labs(
+    title = "Confusion Matrix of Final Model",
+    x = "Predicted TARGET",
+    y = "Actual TARGET"
+  ) +
+  theme_minimal()
+
+```
+
+# Plot Possibility 2: Bar Plot separated by Default & No Default for some classes
+```{r}
+library(ggplot2)
+library(tidyr)
+
+selected_vars <- c(
+  "EDUCATION_TYPE_HIGHER",
+  "FAMILY_STATUS_MARRIED",
+  "HOUSING_TYPE_OWN",
+  "FLAG_OWN_CAR"
+)
+
+plot_df <- merged_ordered |>
+  dplyr::select(TARGET, dplyr::all_of(selected_vars)) |>
+  dplyr::mutate(
+    TARGET = factor(TARGET, levels = c(0, 1),
+                    labels = c("No Default", "Default"))
+  ) |>
+  tidyr::pivot_longer(
+    cols = dplyr::all_of(selected_vars),
+    names_to  = "predictor",
+    values_to = "value"
+  ) |>
+  dplyr::group_by(TARGET, predictor) |>
+  dplyr::summarise(
+    prop = mean(value, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+ggplot(plot_df, aes(x = predictor, y = prop, fill = TARGET)) +
+  geom_col(position = "dodge") +
+  coord_flip() +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  scale_fill_manual(
+    values = c(
+      "No Default" = "#3663df",
+      "Default" = "#80b6fa"
+    )
+  ) +
+  labs(
+    title = "Proportion with Feature = 1 by TARGET",
+    x = "Predictor",
+    y = "Proportion",
+    fill = "TARGET"
+  ) +
+  theme_minimal()
+
+
+```
+
+
+
+
+```{r}
+ggplot(coef_df, aes(x = reorder(term, estimate), y = estimate, fill = estimate)) +
+  geom_col() +
+  coord_flip() +
+  scale_fill_gradient2(low = "darkgreen", mid = "white", high = "red") +
+  labs(
+    title = "Log-Odds of Predictors",
+    x = "Predictor",
+    y = "Coefficient",
+    fill = "Coefficient"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold")
+  )
+
+
+```
+
+
+
+
+
 
