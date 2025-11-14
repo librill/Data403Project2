@@ -76,7 +76,12 @@ credit <- all_credit %>%
     HOUSING_TYPE_OWN = ifelse(NAME_HOUSING_TYPE=="House / apartment", 1, 0),
     HOUSING_TYPE_PARENTS = ifelse(NAME_HOUSING_TYPE=="With parents", 1, 0),
     FLAG_OWN_CAR = ifelse(FLAG_OWN_CAR =="Y", 1, 0),
-    FLAG_OWN_REALTY = ifelse(FLAG_OWN_REALTY=="Y", 1, 0)#,
+    FLAG_OWN_REALTY = ifelse(FLAG_OWN_REALTY=="Y", 1, 0),
+    AGE = DAYS_BIRTH / 365,
+    AGE_GROUPS = case_when(AGE < 35 ~ "<35",
+                           AGE < 45 ~ "35-45",
+                           AGE < 55 ~ "45-55",
+                           AGE >= 55 ~ "55+")
     #CODE_GENDER = ifelse(CODE_GENDER=="F", 1, 0)
   ) %>%
     mutate(
@@ -116,6 +121,7 @@ credit <- all_credit %>%
     INCOME_CLASS_SECOND,
     REGION_POPULATION_RELATIVE,
     CODE_GENDER,
+    AGE_GROUPS,
     TARGET
   )
 
@@ -188,6 +194,7 @@ lg_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
   step_rm("INCOME_CLASS_THIRD") |>
   step_rm("INCOME_CLASS_SECOND") |>
   step_rm("CODE_GENDER") |>
+  step_rm("AGE_GROUPS") |>
   # step_rm("FAMILY_STATUS_MARRIED") |>
   # step_rm("FAMILY_STATUS_OTHER") |>
   step_rm("CONTRACT_TYPE_REVOLVING") |>
@@ -250,6 +257,8 @@ colnames(merged_ordered)
 ```
 
 ```{r}
+# FINAL MODEL OVER HERE
+
 # merged_fifty <- undersample_split(merged_ordered, 0.45)
 splits <- strat_split(merged_ordered, target = "TARGET", train_prop = .6, val_prop = 0.2, seed = 123)
 # undersample the training, not the val and test
@@ -268,6 +277,8 @@ lg_rec <- recipe(TARGET ~ ., data = train_strat) |>
   step_rm("INCOME_CLASS_THIRD") |>
   step_rm("INCOME_CLASS_SECOND") |>
   step_rm("CODE_GENDER") |>
+  step_rm("AGE_GROUPS") |>
+  step_rm("DAYS_EMPLOYED") |>
   step_mutate(TARGET = factor(TARGET, levels=c(0, 1))) |>
   step_dummy(all_nominal_predictors())
 
@@ -300,6 +311,11 @@ test_strat$TARGET
 ```{r}
 calc_fairness_metrics(test_strat$CODE_GENDER, as.numeric(as.character(test_strat$TARGET)), as.numeric(as.character(preds)), no_class = 0)
 ```
+
+```{r}
+calc_fairness_metrics(test_strat$AGE_GROUPS, as.numeric(as.character(test_strat$TARGET)), as.numeric(as.character(preds)), no_class = 0)
+```
+
 
 ```{r}
 cross_validation(data = val_strat, model = "logistic", model_wkflow = logit_wkflow,
