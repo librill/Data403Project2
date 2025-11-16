@@ -184,3 +184,68 @@ test_strat |>
   mutate(predictions = preds) |>
   recall(truth = TARGET, estimate = predictions)
 ```
+
+```{r}
+calc_fairness_metrics(test_strat$CODE_GENDER, as.numeric(as.character(test_strat$TARGET)), as.numeric(as.character(preds)), no_class = 0)
+```
+
+
+```{r}
+calc_fairness_metrics(test_strat$AGE_GROUPS, as.numeric(as.character(test_strat$TARGET)), as.numeric(as.character(preds)), no_class = 0)
+```
+Model is not fair with regard to age groups because DAYS_EMPLOYED is used as
+predictor, so we will remove and evaluate model performance.
+
+```{r}
+# need to convert TARGET back
+train_strat$TARGET <- ifelse(train_strat$TARGET == -1, 0, 1)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ ., data = train_strat) |>
+  step_rm("SK_ID_CURR") |>
+  step_rm("AMT_INCOME_TOTAL") |> 
+  step_rm("REGION_POPULATION_RELATIVE") |>
+  step_rm("INCOME_TO_CREDIT") |>
+  step_rm("CNT_CHILDREN") |>
+  step_rm("CONTRACT_TYPE_REVOLVING") |>
+  step_rm("INCOME_CLASS_FOURTH") |>
+  step_rm("INCOME_CLASS_THIRD") |>
+  step_rm("INCOME_CLASS_SECOND") |>
+  step_rm("CODE_GENDER") |>
+  step_rm("AGE_GROUPS") |>
+  step_rm("DAYS_EMPLOYED") |>
+  step_mutate(TARGET = factor(TARGET, levels=c(0, 1))) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+logistic_fit <- logit_wkflow |>
+  fit(train_strat) |>
+  extract_fit_parsnip()
+
+preds <- predict(logistic_fit, new_data = test_strat)$.pred_class
+
+test_strat |>
+  mutate(predictions = preds) |>
+  precision(truth = TARGET, estimate = predictions)
+
+test_strat |>
+  mutate(predictions = preds) |>
+  recall(truth = TARGET, estimate = predictions)
+```
+
+
+```{r}
+calc_fairness_metrics(test_strat$CODE_GENDER, as.numeric(as.character(test_strat$TARGET)), as.numeric(as.character(preds)), no_class = 0)
+```
+
+
+```{r}
+calc_fairness_metrics(test_strat$AGE_GROUPS, as.numeric(as.character(test_strat$TARGET)), as.numeric(as.character(preds)), no_class = 0)
+```
+
+Model is much more fair with respect to age group, while actually performing 
+slightly better with respect to gender as well. 
