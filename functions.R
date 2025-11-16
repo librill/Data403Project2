@@ -1,4 +1,8 @@
 # --
+# calculate metrics, perform cross validation
+# --
+
+# --
 # calculate metric 
 # consumes observed and predicted values, non-target class, and decision boundary
 # returns metric
@@ -172,12 +176,7 @@ calc_fairness_metrics <- function(protected_class, observed, pred_class, no_clas
     TN <- sum((pred_class[include] == 1) & (observed[include] == 1))
     FP <- sum((pred_class[include] == no_class) & (observed[include] == 1))
     FN <- sum((pred_class[include] == 1) & (observed[include] == no_class))
-    
-    print(TP)
-    print(TN)
-    print(FP)
-    print(FN)
-    
+
     positive_predictions[i] <- (TP + FP) / (TP + TN + FP + FN)
     recalls[i] <- TP / (TP + FN)
     error_rates[i] <- FP / (TN + FP)

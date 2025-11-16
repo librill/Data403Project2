@@ -1,39 +1,19 @@
 ---
-title: "svc"
+title: "SVC Classifier"
 output: html_document
-date: "2025-11-13"
+date: "2025-11-16"
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+**Fit and Evaluate SVC on Training Set**
+
+NOTE: I did not run all of these for the sake of time
 
 ```{r, include=FALSE}
-library(dplyr)
-
+source(here::here("libraries.R"))
 source(here::here("data_cleaning.R"))
 source(here::here("functions.R"))
 source(here::here("splits.R"))
 ```
-
-
-## SVC
-
-just going to try some tidymodels SVC stuff to see what works and what I can 
-come up with and whatnot
-
-```{r}
-# load the data
-credit <- credit |>
-  na.omit()
-
-# then, create sets
-splits <- random_split(credit, train_prop = 0.7, val_prop = 0.1, seed = 123)
-train_random <- splits$train
-val_random <- splits$validation
-test_random <- splits$test
-```
-
 
 ```{r}
 # define model (used for all)
@@ -42,33 +22,33 @@ svm_mod <- svm_linear() |>
   set_engine("LiblineaR")
 ```
 
+### Random Split, No UnderSampling
+
+```{r}
+# create train/val/test splits
+splits <- random_split(df, train_prop = 0.6, val_prop = 0.2, seed = 123)
+train_random <- splits$train
+val_random <- splits$validation
+test_random <- splits$test
+```
+
 ```{r}
 # mutate target, c(1, -1) [because the target should come first]
 train_random$TARGET <- ifelse(train_random$TARGET == 0, -1, 1)
 ```
 
 ```{r}
-train_random$TARGET
-```
-
-```{r}
-# fit *this* model
 svc_reg <- recipe(TARGET ~ ., data = train_random) |>
   step_mutate(TARGET = factor(TARGET, levels = c(1, -1))) |>
+  step_rm(SK_ID_CURR, INCOME_TO_CREDIT, CREDIT_TO_NUM_CREDITS, INCOME_TO_REGION,
+        CODE_GENDER, AGE_GROUPS) |>
   step_naomit(all_predictors()) |>
   step_dummy(all_nominal_predictors()) 
                
 svm_wkflow <- workflow() |>
   add_model(svm_mod) |>
   add_recipe(svc_reg)
-```
 
-
-```{r}
-# NOTE: THIS TAKES FOREVER!!
-# NOTE: ALSO NO ROC!!!
-
-# collect metrics (illegally)
 set.seed(18938)
 cvs <- vfold_cv(train_random, v = 5)
 svm_wkflow |>
@@ -77,41 +57,170 @@ svm_wkflow |>
 ```
 
 
+## Random Split, 50/50 Undersampling
+
 ```{r}
-credit_fifty <- undersample_split(credit, 0.5)
-head(credit_fifty)
+df_fifty <- undersample_split(df, 0.5)
+
+splits <- random_split(df_fifty, train_prop = 0.6, val_prop = 0.2, seed = 123)
+train_random_fifty <- splits$train
+val_random_fifty <- splits$validation
+test_random_fifty <- splits$test
+
+train_random_fifty$TARGET <- ifelse(train_random$TARGET == 0, -1, 1)
 ```
 
-
 ```{r}
-# fit *this* model
-splits_fifty <- random_split(credit_fifty, train_prop = 0.7, val_prop = 0.1, seed = 123)
-
-train_random_fifty <- splits_fifty$train
-val_random_fifty <- splits_fifty$validation
-test_random_fifty <- splits_fifty$test
-train_random_fifty$TARGET <- ifelse(train_random_fifty$TARGET == 0, -1, 1)
-
-
-svc_reg <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING + DOCUMENTS_FLAGGED + FLAG_OWN_REALTY, data = train_random_fifty) |>
+svc_reg <- recipe(TARGET ~ ., data = train_random) |>
   step_mutate(TARGET = factor(TARGET, levels = c(1, -1))) |>
+  step_rm(SK_ID_CURR, INCOME_TO_CREDIT, CREDIT_TO_NUM_CREDITS, INCOME_TO_REGION,
+        CODE_GENDER, AGE_GROUPS) |>
   step_naomit(all_predictors()) |>
   step_dummy(all_nominal_predictors()) 
                
 svm_wkflow <- workflow() |>
   add_model(svm_mod) |>
   add_recipe(svc_reg)
-```
 
-```{r}
-set.seed(2222)
-cvs <- vfold_cv(train_random_fifty, v = 5)
-
+set.seed(18938)
+cvs <- vfold_cv(train_random, v = 5)
 svm_wkflow |>
   fit_resamples(resamples = cvs, metrics = metric_set(accuracy, f_meas, precision, recall)) |>
   collect_metrics()
 ```
-my next thought is to bring in the credit beuarua, join and include the number 
-of credits and also average of days credit
 
-want to be careful about NAs here ...
+```{r}
+svc_reg <- recipe(TARGET ~ AMT_CREDIT + AMT_ANNUITY + AMT_INCOME_TOTAL, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET, levels = c(1, -1))) |>
+  step_naomit(all_predictors()) |>
+  step_dummy(all_nominal_predictors())
+
+svm_wkflow <- workflow() |>
+  add_model(svm_mod) |>
+  add_recipe(svc_reg)
+
+set.seed(18938)
+cvs <- vfold_cv(train_random, v = 5)
+svm_wkflow |>
+  fit_resamples(resamples = cvs, metrics = metric_set(accuracy, f_meas, precision, recall)) |>
+  collect_metrics()
+```
+
+```{r}
+svc_reg <- recipe(TARGET ~ CNT_CHILDREN, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET, levels = c(1, -1))) |>
+  step_naomit(all_predictors()) |>
+  step_dummy(all_nominal_predictors())
+
+svm_wkflow <- workflow() |>
+  add_model(svm_mod) |>
+  add_recipe(svc_reg)
+
+set.seed(18938)
+cvs <- vfold_cv(train_random, v = 5)
+svm_wkflow |>
+  fit_resamples(resamples = cvs, metrics = metric_set(accuracy, f_meas, precision, recall)) |>
+  collect_metrics()
+```
+
+## Stratified Split, 50/50 Undersampling
+
+```{r}
+svc_reg <- recipe(TARGET ~ ., data = train_strat_fifty) |>
+  step_rm("SK_ID_CURR") |>
+  step_rm("AMT_INCOME_TOTAL") |> 
+  step_rm("REGION_POPULATION_RELATIVE") |>
+  step_rm("INCOME_TO_CREDIT") |>
+  step_rm("CNT_CHILDREN") |>
+  step_rm("CONTRACT_TYPE_REVOLVING") |>
+  step_rm("INCOME_CLASS_FOURTH") |>
+  step_rm("INCOME_CLASS_THIRD") |>
+  step_rm("INCOME_CLASS_SECOND") |>
+  step_rm("CODE_GENDER") |>
+  step_rm("AGE_GROUPS") |>
+  step_mutate(TARGET = factor(TARGET, levels = c(1, -1))) |>
+  step_dummy(all_nominal_predictors())
+
+svm_wkflow <- workflow() |>
+  add_model(svm_mod) |>
+  add_recipe(svc_reg)
+
+set.seed(18938)
+cvs <- vfold_cv(train_random, v = 5)
+svm_wkflow |>
+  fit_resamples(resamples = cvs, metrics = metric_set(accuracy, f_meas, precision, recall)) |>
+  collect_metrics()
+```
+
+```{r}
+svc_reg <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING + AMT_CREDIT + AMT_INCOME_TOTAL + HOUSING_TYPE_OWN, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET, levels = c(1, -1))) |>
+  step_naomit(all_predictors()) |>
+  step_dummy(all_nominal_predictors())
+
+svm_wkflow <- workflow() |>
+  add_model(svm_mod) |>
+  add_recipe(svc_reg)
+
+set.seed(18938)
+cvs <- vfold_cv(train_random, v = 5)
+svm_wkflow |>
+  fit_resamples(resamples = cvs, metrics = metric_set(accuracy, f_meas, precision, recall)) |>
+  collect_metrics()
+```
+
+```{r}
+svc_reg <- recipe(TARGET ~ ., data = train_strat_fifty) |>
+  step_rm("SK_ID_CURR") |>
+  step_rm("AMT_INCOME_TOTAL") |> 
+  step_rm("CONTRACT_TYPE_REVOLVING") |>
+  step_rm("FLAG_OWN_CAR") |>
+  step_rm("FLAG_OWN_REALTY") |>
+  step_rm("INCOME_CLASS_FOURTH") |>
+  step_rm("INCOME_CLASS_THIRD") |>
+  step_rm("INCOME_CLASS_SECOND") |>
+  step_rm("CODE_GENDER") |>
+  step_rm("AGE_GROUPS") |>
+  step_rm("DAYS_EMPLOYED") |>
+  step_mutate(TARGET = factor(TARGET, levels = c(1, -1))) |>
+  step_dummy(all_nominal_predictors())
+
+svm_wkflow <- workflow() |>
+  add_model(svm_mod) |>
+  add_recipe(svc_reg)
+
+set.seed(18938)
+cvs <- vfold_cv(train_random, v = 5)
+svm_wkflow |>
+  fit_resamples(resamples = cvs, metrics = metric_set(accuracy, f_meas, precision, recall)) |>
+  collect_metrics()
+```
+
+```{r}
+svc_reg <- recipe(TARGET ~ ., data = train_strat_fifty) |>
+  step_rm("SK_ID_CURR") |>
+  step_rm("AMT_INCOME_TOTAL") |> 
+  step_rm("REGION_POPULATION_RELATIVE") |>
+  step_rm("INCOME_TO_CREDIT") |>
+  step_rm("CNT_CHILDREN") |>
+  step_rm("CONTRACT_TYPE_REVOLVING") |>
+  step_rm("FAMILY_STATUS_MARRIED") |>
+  step_rm("FAMILY_STATUS_SINGLE") |>
+  step_rm("HOUSING_TYPE_OWN") |>
+  step_rm("HOUSING_TYPE_PARENTS") |>
+  step_rm("CODE_GENDER") |>
+  step_rm("AGE_GROUPS") |>
+  step_rm("DAYS_EMPLOYED") |>
+  step_mutate(TARGET = factor(TARGET, levels = c(1, -1))) |>
+  step_dummy(all_nominal_predictors())
+
+svm_wkflow <- workflow() |>
+  add_model(svm_mod) |>
+  add_recipe(svc_reg)
+
+set.seed(18938)
+cvs <- vfold_cv(train_random, v = 5)
+svm_wkflow |>
+  fit_resamples(resamples = cvs, metrics = metric_set(accuracy, f_meas, precision, recall)) |>
+  collect_metrics()
+```

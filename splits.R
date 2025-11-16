@@ -1,6 +1,6 @@
-library(splitstackshape)
-library(dplyr)
-library(ggplot2)
+# --
+# different ways to split data
+# --
 
 # --
 # split data randomly
@@ -62,7 +62,8 @@ strat_split <- function(df, target, train_prop = 0.6, val_prop = 0.2, seed = 123
 # consumes dataframe, training and validation set proportions
 # returns training, validation, and test sets
 # ---
-time_split <- function(df, train_prop = 0.60, val_prop = 0.20) {
+time_split <- function(df, train_prop = 0.60, val_prop = 0.20, seed = 123) {
+  set.seed(seed)
   df_ord <- df %>% arrange(SK_ID_CURR)
   n <- nrow(df_ord)
   train_end <- floor(train_prop * n)
