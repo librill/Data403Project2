@@ -7,37 +7,36 @@ We use the following types of classification: Logistic, LDA, and SVC.
 Our process is as follows:
 
 -   Split the data into training, validation, and testing sets.
-
-<!-- -->
-
 -   Fit and evaluate a bunch of models on training data.
-
 -   Take the model of each type (Logistic, LDA, and SVC) that performed best on training and evaluate on validation data.
-
 -   Take the model that performed best on validation data and report metrics as it performs on test set.
 
 The code organization is as follows:
 
-/scripts contains all of the scripts that are used in notebooks:
+-   /proposal contains project proposal files
 
--   data_cleaning.R contains data cleaning
+-   /scripts contains all of the scripts that are used in notebooks
 
--   functions.R contains a bunch of functions
+    -   data_cleaning.R contains data cleaning
 
--   libraries.R loads all libraries that are used
+    -   functions.R contains a bunch of functions
 
--   plots.R creates plots
+    -   libraries.R loads all libraries that are used
 
--   splits.R contains different functions that split data differently
+    -   plots.R creates plots
 
-/notebooks contains all the notebooks:
+    -   splits.R contains different functions that split data differently
 
--   lda.Rmd is fitting/evaluation of LDA on training data
+-   /notebooks contains all the notebooks:
 
--   logistic.Rmd is fitting/evaluation of Logistic on training data
+    -   lda.Rmd is fitting/evaluation of LDA on training data
 
--   svc.Rmd is fitting/evaluation of SVC on training data
+    -   logistic.Rmd is fitting/evaluation of Logistic on training data
 
--   TODO: selection.Rmd is evaluation of models on validation and testing sets
+    -   svc.Rmd is fitting/evaluation of SVC on training data
 
--   TODO: fairness.Rmd is evaluation of model on fairness
+    -   TODO: selection.Rmd is evaluation of models on validation and testing sets
+
+    -   fairness.Rmd is evaluation of chosen model fairness
+
+-   /images contains images of plots
