@@ -4,26 +4,43 @@ output: html_document
 date: "2025-11-16"
 ---
 
-So basically, here I want to evaluate the performance of the best models on
-the validation set.
+Now that we have evaluated a bunch of models on the training data, it is time
+to analyze the performance of the best models on the validation and test sets. 
 
-Then, evaluate the final model on the test set.
+We will take the model of each type that performed best on the training set and 
+evaluate performance on the validation set. 
 
-For now, I am just going to do the logistic model that we chose, but will
-incorporate SVC and LDA tomorrow. 
+The model that performs best on the validation set will be our chosen model, 
+with metrics reported based on test set performance.
+
+```{r, include=FALSE}
+source(here::here("scripts/libraries.R"))
+source(here::here("scripts/data_cleaning.R"))
+source(here::here("scripts/functions.R"))
+source(here::here("scripts/splits.R"))
+```
+
+```{r}
+strat_splits <- strat_split(df, "TARGET", train_prop = 0.6, val_prop = 0.2, seed = 123)
+# undersample the training, not the val and test
+train_strat <- undersample_split(strat_splits$train, 0.5)
+val_strat <- strat_splits$val
+test_strat <- strat_splits$test
+```
 
 ## Validation Set
 
 ### Logistic
+
 ```{r}
-strat_splits <- strat_split(df, "TARGET", train_prop = 0.6, val_prop = 0.2, seed = 123)
-# undersample the training, not the val and test
-train_strat <- undersample_split(splits$train, 0.5)
-val_strat <- splits$val
-test_strat <- splits$test
+# define model
+logit_mod <- logistic_reg() |>
+  set_mode("classification") |>
+  set_engine("glm")
 ```
 
 Best-performing logistic model:
+
 ```{r}
 lg_rec <- recipe(TARGET ~ ., data = train_strat) |>
   step_rm("SK_ID_CURR") |>
@@ -44,11 +61,11 @@ logit_wkflow <- workflow() |>
   add_model(logit_mod) |>
   add_recipe(lg_rec)
 
-l_fit <- logit_wkflow |>
+logistic_fit <- logit_wkflow |>
   fit(train_strat) |>
   extract_fit_parsnip()
 
-preds <- predict(l_fit, new_data = val_strat)$.pred_class
+preds <- predict(logistic_fit, new_data = val_strat)$.pred_class
 
 val_strat |>
   mutate(predictions = preds) |>
@@ -61,20 +78,103 @@ val_strat |>
 
 ### LDA
  
-TODO ..
+```{r}
+# define model
+lda_mod <- discrim_linear() |>
+  set_mode("classification") |>
+  set_engine("MASS")
+```
+
+Best-performing LDA model: 
+
+```{r}
+lda_rec <- recipe(TARGET ~ ., data = train_strat) |>
+  step_rm(SK_ID_CURR, AMT_INCOME_TOTAL, AMT_CREDIT, NUM_CREDITS,
+          REGION_POPULATION_RELATIVE, CODE_GENDER, AGE_GROUPS, HOUSING_TYPE_OWN,
+          HOUSING_TYPE_PARENTS, FLAG_OWN_CAR) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors()) |>
+  step_zv(all_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+lda_fit <- lda_wkflow |>
+  fit(train_strat) |>
+  extract_fit_parsnip()
+
+preds <- predict(lda_fit, new_data = val_strat)$.pred_class
+
+val_strat |>
+  mutate(predictions = preds) |>
+  precision(truth = TARGET, estimate = predictions)
+
+val_strat |>
+  mutate(predictions = preds) |>
+  recall(truth = TARGET, estimate = predictions)
+```
 
 ### SVC
 
-TODO ...
+```{r}
+# mutate target, c(1, -1) [because the target should come first]
+train_strat$TARGET <- ifelse(train_strat$TARGET == 0, -1, 1)
+val_strat$TARGET <- ifelse(val_strat$TARGET == 0, -1, 1)
+val_strat <- val_strat %>%
+  mutate(TARGET = factor(TARGET, levels = c(1, -1)))
+```
+
+```{r}
+# define model (used for all)
+svm_mod <- svm_linear() |>
+  set_mode("classification") |>
+  set_engine("LiblineaR")
+```
+
+```{r}
+svc_reg <- recipe(TARGET ~ ., data = train_strat) |>
+  step_rm("SK_ID_CURR") |>
+  step_rm("AMT_INCOME_TOTAL") |> 
+  step_rm("CONTRACT_TYPE_REVOLVING") |>
+  step_rm("FLAG_OWN_CAR") |>
+  step_rm("FLAG_OWN_REALTY") |>
+  step_rm("INCOME_CLASS_FOURTH") |>
+  step_rm("INCOME_CLASS_THIRD") |>
+  step_rm("INCOME_CLASS_SECOND") |>
+  step_rm("CODE_GENDER") |>
+  step_rm("AGE_GROUPS") |>
+  step_rm("DAYS_EMPLOYED") |>
+  step_mutate(TARGET = factor(TARGET, levels = c(1, -1))) |>
+  step_dummy(all_nominal_predictors()) |>
+  step_zv(all_predictors())
+
+svm_wkflow <- workflow() |>
+  add_model(svm_mod) |>
+  add_recipe(svc_reg)
+
+svm_fit <- svm_wkflow |>
+  fit(train_strat) |>
+  extract_fit_parsnip()
+
+preds <- predict(svm_fit, new_data = val_strat)$.pred_class
+
+val_strat |>
+  mutate(predictions = preds) |>
+  precision(truth = TARGET, estimate = predictions)
+
+val_strat |>
+  mutate(predictions = preds) |>
+  recall(truth = TARGET, estimate = predictions)
+```
+
+Logistic Model had the highest recall, so we will choose that model. 
+We will evaluate on test set for performance metrics.
 
 ## Test Set
 
 ```{r}
-l_fit <- logit_wkflow |>
-  fit(train_strat) |>
-  extract_fit_parsnip()
-
-preds <- predict(l_fit, new_data = test_strat)$.pred_class
+preds <- predict(logistic_fit, new_data = test_strat)$.pred_class
 
 test_strat |>
   mutate(predictions = preds) |>

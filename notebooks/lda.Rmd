@@ -74,13 +74,18 @@ test_strat_fifty <- splits$test
 
 ## Stratified Split, 50/50 Undersampling
 
+```{r}
+colnames(df)
+```
+
 **NOTE: this is the lda model that performed the best on the stratified, 
 undersampled training set**
 
 ```{r}
 lda_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
-  step_rm(SK_ID_CURR, INCOME_TO_CREDIT, CREDIT_TO_NUM_CREDITS, INCOME_TO_REGION,
-          CODE_GENDER, AGE_GROUPS) |>
+  step_rm(SK_ID_CURR, AMT_INCOME_TOTAL, AMT_CREDIT, NUM_CREDITS,
+          REGION_POPULATION_RELATIVE, CODE_GENDER, AGE_GROUPS, HOUSING_TYPE_OWN,
+          HOUSING_TYPE_PARENTS, FLAG_OWN_CAR) |>
   step_mutate(TARGET = factor(TARGET)) |>
   step_dummy(all_nominal_predictors()) |>
   step_zv(all_predictors())
@@ -106,6 +111,57 @@ lda_wkflow <- workflow() |>
 lda_wkflow
 cross_validation(data = train_strat_fifty, model = "lda", model_wkflow = lda_wkflow,
                            num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lda_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
+  step_rm(SK_ID_CURR, AMT_INCOME_TOTAL, AMT_CREDIT, NUM_CREDITS,
+          REGION_POPULATION_RELATIVE, CODE_GENDER, AGE_GROUPS, FLAG_OWN_REALTY,
+          FLAG_OWN_CAR, EDUCATION_TYPE_SECONDARY, EDUCATION_TYPE_HIGHER) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors()) |>
+  step_zv(all_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+cross_validation(data = train_strat_fifty, model = "lda", model_wkflow = lda_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lda_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
+  step_rm(SK_ID_CURR, AMT_INCOME_TOTAL, AMT_CREDIT, NUM_CREDITS,
+          REGION_POPULATION_RELATIVE, CODE_GENDER, AGE_GROUPS, AMT_GOODS_PRICE, 
+          FAMILY_STATUS_SINGLE, FAMILY_STATUS_MARRIED) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors()) |>
+  step_zv(all_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+cross_validation(data = train_strat_fifty, model = "lda", model_wkflow = lda_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lda_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
+  step_rm(SK_ID_CURR, AMT_INCOME_TOTAL, AMT_CREDIT, NUM_CREDITS,
+          REGION_POPULATION_RELATIVE, CODE_GENDER, AGE_GROUPS, AMT_GOODS_PRICE, 
+          FAMILY_STATUS_SINGLE, FAMILY_STATUS_MARRIED) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors()) |>
+  step_zv(all_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+cross_validation(data = train_strat_fifty, model = "lda", model_wkflow = lda_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
 ```
 
 ```{r}
