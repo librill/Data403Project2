@@ -9,10 +9,10 @@ date: "2025-11-16"
 NOTE: I did not run all of these for the sake of time
 
 ```{r, include=FALSE}
-source(here::here("libraries.R"))
-source(here::here("data_cleaning.R"))
-source(here::here("functions.R"))
-source(here::here("splits.R"))
+source(here::here("scripts/libraries.R"))
+source(here::here("scripts/data_cleaning.R"))
+source(here::here("scripts/functions.R"))
+source(here::here("scripts/splits.R"))
 ```
 
 ```{r}

@@ -7,10 +7,10 @@ date: "2025-11-16"
 **Fit and Evaluate Logistic Classifier on Training Set**
 
 ```{r, include=FALSE}
-source(here::here("libraries.R"))
-source(here::here("data_cleaning.R"))
-source(here::here("functions.R"))
-source(here::here("splits.R"))
+source(here::here("scripts/libraries.R"))
+source(here::here("scripts/data_cleaning.R"))
+source(here::here("scripts/functions.R"))
+source(here::here("scripts/splits.R"))
 ```
 
 ```{r}

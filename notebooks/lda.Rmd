@@ -8,11 +8,15 @@ date: "2025-11-16"
 
 TODO: a lot of these are not working, so going to have to figure out why ...
 
+```{r}
+here::here("/scripts/libraries.R")
+```
+
 ```{r, include=FALSE}
-source(here::here("libraries.R"))
-source(here::here("data_cleaning.R"))
-source(here::here("functions.R"))
-source(here::here("splits.R"))
+source(here::here("scripts/libraries.R"))
+source(here::here("scripts/data_cleaning.R"))
+source(here::here("scripts/functions.R"))
+source(here::here("scripts/splits.R"))
 ```
 
 ```{r}
