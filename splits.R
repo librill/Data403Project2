@@ -1,17 +1,13 @@
-# NOTE: this is for stratified, used in strat_split()
-# install.packages("splitstackshape")
 library(splitstackshape)
-
-# TODO: make sure that we are using "train", "test", and "val" consistently
-# NOTE: for basically all of the function, we are assuming 'TARGET' is the
-# response variable and that it has values 0 and 1
+library(dplyr)
+library(ggplot2)
 
 # --
 # split data randomly
 # consumes dataframe, desired proportions of train, validation sets, seed
 # returns randomly split train, validation, and test sets
 # --
-random_split <- function(df, train_prop = 0.7, val_prop = 0.1, seed = 123) {
+random_split <- function(df, train_prop = 0.6, val_prop = 0.2, seed = 123) {
   set.seed(seed)
   
   df_shuffled <- df |> slice_sample(prop = 1)
@@ -28,13 +24,13 @@ random_split <- function(df, train_prop = 0.7, val_prop = 0.1, seed = 123) {
 }
 
 # --
-# *new* stratified split
+# stratified data split
 # consumes dataframe, name of column to be split on, training and validation
 # set proportions, and seed (for reproducibility)
 # returns stratified train, validation, and test sets
 # NOTE: stratified() returns data.table, so need to convert to data.frame
 # --
-strat_split <- function(df, target, train_prop = 0.7, val_prop = 0.1, seed = 123) {
+strat_split <- function(df, target, train_prop = 0.6, val_prop = 0.2, seed = 123) {
   set.seed(seed)
   
   # split the data into two sets: training and the rest
@@ -49,7 +45,7 @@ strat_split <- function(df, target, train_prop = 0.7, val_prop = 0.1, seed = 123
   val <- as.data.frame(split_two$SAMP1)
   test <- as.data.frame(split_two$SAMP2)
   
-  # maybe have to randomize the order, as well? that could be an issue ...
+  # randomize order
   train_indices <- sample(nrow(train))
   val_indices <- sample(nrow(val))
   test_indices <- sample(nrow(test))
@@ -59,6 +55,74 @@ strat_split <- function(df, target, train_prop = 0.7, val_prop = 0.1, seed = 123
   test <- test[test_indices, ]
   
   return(list(train=train, val=val, test=test))
+}
+
+# ---
+# non-random split 1: train on older loan -> test on newer loan applicants
+# consumes dataframe, training and validation set proportions
+# returns training, validation, and test sets
+# ---
+time_split <- function(df, train_prop = 0.60, val_prop = 0.20) {
+  df_ord <- df %>% arrange(SK_ID_CURR)
+  n <- nrow(df_ord)
+  train_end <- floor(train_prop * n)
+  val_end   <- floor((train_prop + val_prop) * n)
+  
+  list(
+    train = df_ord[1:train_end, ],
+    val   = df_ord[(train_end + 1):val_end, ],
+    test  = df_ord[(val_end + 1):n, ]
+  )
+}
+
+# --
+# non-random split 2: split on incomes; train on medium and high income, test on low-income
+# --
+income_split <- function(df, val_prop_within_train = 0.20, seed = 123) {
+  set.seed(seed)
+  q <- quantile(df$AMT_INCOME_TOTAL, probs = c(1/3, 2/3), na.rm = TRUE)
+  low  <- df %>% filter(AMT_INCOME_TOTAL <  q[1])
+  mid  <- df %>% filter(AMT_INCOME_TOTAL >= q[1], AMT_INCOME_TOTAL <  q[2])
+  high <- df %>% filter(AMT_INCOME_TOTAL >= q[2])
+  
+  trainval <- bind_rows(mid, high) %>% slice_sample(prop = 1)
+  n_tv <- nrow(trainval)
+  val_n <- floor(val_prop_within_train * n_tv)
+  
+  val_idx <- sample(seq_len(n_tv), size = val_n)
+  val  <- trainval[val_idx, ]
+  train <- trainval[-val_idx, ]
+  
+  test <- low %>% slice_sample(prop = 1)
+  
+  list(train = train, val = val, test = test)
+}
+
+# ---
+# non-random split 3: split on employment type; train on "old" employment types and 
+# test on "newer" employment types
+# ---
+loan_type_split <- function(df, val_prop_within_train = 0.20, use_cash_for_train = TRUE, seed = 123) {
+  set.seed(seed)
+  cash      <- df %>% filter(CONTRACT_TYPE_CASH == 1)
+  revolving <- df %>% filter(CONTRACT_TYPE_REVOLVING == 1)
+  
+  if (use_cash_for_train) {
+    trainval <- cash %>% slice_sample(prop = 1)
+    test     <- revolving %>% slice_sample(prop = 1)
+  } else {
+    trainval <- revolving %>% slice_sample(prop = 1)
+    test     <- cash %>% slice_sample(prop = 1)
+  }
+  
+  n_tv <- nrow(trainval)
+  val_n <- floor(val_prop_within_train * n_tv)
+  val_idx <- sample(seq_len(n_tv), size = val_n)
+  
+  val   <- trainval[val_idx, ]
+  train <- trainval[-val_idx, ]
+  
+  list(train = train, val = val, test = test)
 }
 
 # ---
@@ -74,7 +138,7 @@ undersample_split <- function(df, pct_positive = .5) {
   df_negative <- df %>%
     filter(TARGET == 0)
   
-  # count how many postive, get correct proportion negative
+  # count how many positive, get correct proportion negative
   num_pos <- nrow(df_positive)
   num_neg <- floor(((1 - pct_positive) / pct_positive) * num_pos)
   
@@ -85,51 +149,3 @@ undersample_split <- function(df, pct_positive = .5) {
   all_sampled <- rbind(df_positive, df_negative_sampled)
   return(all_sampled)
 }
-
-# --
-# *old* stratified split
-# --
-# stratified_split <- function(df, target, train_prop = 0.70, val_prop = 0.10, seed = 123) {
-#   stopifnot(train_prop > 0, val_prop >= 0, train_prop + val_prop < 1)
-#   
-#   set.seed(seed)
-#   yquo <- enquo(target)
-#   yname <- as_name(yquo)
-#   
-#   parts <- df %>%
-#     mutate(.target = as.factor(!!yquo)) %>%
-#     group_by(.target) %>%
-#     group_split() %>%
-#     lapply(function(d) {
-#       n <- nrow(d)
-#       n_train <- floor(train_prop * n)
-#       n_val   <- floor(val_prop   * n)
-#       if (n >= 3) {
-#         n_train <- max(1, n_train)
-#         n_val   <- max(0, min(n - 2, n_val))
-#       }
-#       idx <- sample.int(n)
-#       list(
-#         train = d[idx[1:n_train], , drop = FALSE],
-#         val   = d[idx[(n_train + 1):(n_train + n_val)], , drop = FALSE],
-#         test  = d[idx[(n_train + n_val + 1):n], , drop = FALSE]
-#       )
-#     })
-#   
-#   bind_and_fix <- function(slot) {
-#     out <- bind_rows(lapply(parts, `[[`, slot)) %>% dplyr::select(-.target)
-#     out <- out %>%
-#       mutate(!!yname := factor(as.character(!!yquo), levels = c("0","1"))) %>%
-#       sample_frac(1) 
-#     out
-#   }
-#   
-#   list(
-#     train = bind_and_fix("train"),
-#     val   = bind_and_fix("val"),
-#     test  = bind_and_fix("test")
-#   )
-# }
-
-
-
