@@ -4,4 +4,75 @@ output: html_document
 date: "2025-11-16"
 ---
 
-TODO: this is where we will perform fairness evaluation and whatnot
+This is where each of us will conduct fairness evaluation for 401 .. "eyeball" 
+splits are provided at the bottom of the file
+
+```{r, include=FALSE}
+source(here::here("scripts/libraries.R"))
+source(here::here("scripts/data_cleaning.R"))
+source(here::here("scripts/functions.R"))
+source(here::here("scripts/splits.R"))
+```
+
+```{r}
+strat_splits <- strat_split(df, "TARGET", train_prop = 0.6, val_prop = 0.2, seed = 123)
+# undersample the training, not the val and test
+train_strat <- undersample_split(strat_splits$train, 0.5)
+val_strat <- strat_splits$val
+test_strat <- strat_splits$test
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ ., data = train_strat) |>
+  step_rm("SK_ID_CURR") |>
+  step_rm("AMT_INCOME_TOTAL") |> 
+  step_rm("REGION_POPULATION_RELATIVE") |>
+  step_rm("INCOME_TO_CREDIT") |>
+  step_rm("CNT_CHILDREN") |>
+  step_rm("CONTRACT_TYPE_REVOLVING") |>
+  step_rm("INCOME_CLASS_FOURTH") |>
+  step_rm("INCOME_CLASS_THIRD") |>
+  step_rm("INCOME_CLASS_SECOND") |>
+  step_rm("CODE_GENDER") |>
+  step_rm("AGE_GROUPS") |>
+  step_mutate(TARGET = factor(TARGET, levels=c(0, 1))) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+logistic_fit <- logit_wkflow |>
+  fit(train_strat) |>
+  extract_fit_parsnip()
+
+# make predictions
+preds <- predict(logistic_fit, new_data = val_strat)$.pred_class
+
+# bind to validation set
+val_strat$PREDICTION <- preds
+
+# find error
+errors_df <- val_strat %>%
+  filter(TARGET != PREDICTION)
+
+eyeball <- errors_df[1:150,]
+head(eyeball)
+```
+
+James errors:
+```{r}
+eyeball[c(1:50, 51:100), ]
+```
+
+Daniel errors:
+
+```{r}
+eyeball[c(51:100, 101:150), ]
+```
+
+Libby errors:
+
+```{r}
+eyeball[c(1:50, 101:150), ]
+```
