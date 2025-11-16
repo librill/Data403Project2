@@ -35,8 +35,8 @@ The code organization is as follows:
 
     -   svc.Rmd is fitting/evaluation of SVC on training data
 
-    -   TODO: selection.Rmd is evaluation of models on validation and testing sets
+    -   selection.Rmd is evaluation of models on validation and testing sets. also includes evaluation and discussion of model fairness.
 
-    -   fairness.Rmd is evaluation of chosen model fairness
+    -   fairness.RMD contains manual error analysis on "eyeball" portion of validation set
 
 -   /images contains images of plots
