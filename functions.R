@@ -1,11 +1,8 @@
 # --
 # calculate metric 
-# consumes observed and predicted values, ..., and decision boundary
+# consumes observed and predicted values, non-target class, and decision boundary
 # returns metric
 # --
-
-# TODO: add denom != 0 check
-
 calc_metrics <- function(observed, predicted, no_class, bound) {
   cm <- calc_confusion_matrix(observed, predicted, no_class, bound)
 
@@ -23,7 +20,7 @@ calc_metrics <- function(observed, predicted, no_class, bound) {
 
 # --
 # helper function to calculate confusion matrix
-# consumers observed and predicted values, ..., and decision boundary
+# consumers observed and predicted values, non-target class, and decision boundary
 # returns list of TP, TN, FP, FN
 # --
 calc_confusion_matrix <- function(observed, predicted, no_class, bound) {
@@ -37,17 +34,9 @@ calc_confusion_matrix <- function(observed, predicted, no_class, bound) {
 }
 
 # --
-# perform k-fold cross-validation
-# consumes data, model type, model workflow, k, ..., and decision boundary
-# returns metric average across k folds
-# NOTE: in data, y must be the last column
-# --
-
-# --
+# returns single fold of original dataframe with predicted values, classifications
 # consumes dataframe, model, worfklow, and makes predictions
 # returns predictions combined with original dataframe to understand 
-# NOTE: just for one fold ...
-# characteristics in FALSE POSITIVES (getting a lot of those right now ..)
 # --
 understand_predictions <- function(data, model, model_wkflow, num_splits, bound) {
   set.seed(18938)
@@ -75,16 +64,19 @@ understand_predictions <- function(data, model, model_wkflow, num_splits, bound)
     preds <- predict(model_fit, new_data = test_df, type = "prob")$.pred_1
   }
   
-  # get actual predictions, and values 0/1
+  # get actual predictions and values 0/1
   test_df$preds <- round(preds, 4)
   test_df$vals <- ry <- ifelse(preds > bound, 1, 0)
   
   return(test_df)
 }
 
-# TODO: how can we see the actual vs. predicted? could look at those in the 
-# context of the data to make a decision about what we want to do moving forward
-
+# --
+# perform k-fold cross-validation
+# consumes data, model type, model workflow, k, non-target class, and decision boundary
+# returns metric average across k folds
+# NOTE: in data, y must be the last column
+# --
 cross_validation <- function(data, model, model_wkflow, num_splits, no_class, bound) {
   set.seed(18938)
   df_cvs <- vfold_cv(data, v = num_splits)
@@ -129,16 +121,9 @@ cross_validation <- function(data, model, model_wkflow, num_splits, no_class, bo
 
 # --
 # calculate ROC-AUC
-# consumes observed and predicted values, ..., and list of boundaries
+# consumes observed and predicted values, non-target class, and list of boundaries
 # returns auc of roc
 # --
-
-# NOTE: this assumes bounds are valid for probabilities (between 0 and 1), 
-# but that should be fine since we are defining it anyways
-
-# TODO: this is very python-like right now, would like to convert to more
-# r-oriented pattern (vectorized instead of iterating through lists)
-
 calc_roc_auc <- function(observed, predicted, no_class, bounds) {
   # create vectors of senses, specs
   senses <- c()
@@ -157,20 +142,16 @@ calc_roc_auc <- function(observed, predicted, no_class, bounds) {
   }
   
   # then, find the area under the curve (using trapezoidal area)
-  area_sum <- 0
-  for (i in 1:(length(senses) - 1)) {
-    area <- ((senses[i] - senses[i+1]) * (specs[i] + specs[i + 1])) / 2
-    area_sum <- area_sum + area
-  }
-
-  return(area_sum)
+  area <- sum((senses[-1] - senses[-length(senses)]) * (specs[-length(specs)] + specs[-1]) / 2)
+  return(area)
 }
 
 
 # --
 # calculate demographic parity, equal opportunity, and fpr parity
-# consumes protected class (vector from data), observed and predicted values, ..., and a decision boundary
-# returns fairness metrics
+# consumes protected class (vector from data), observed and predicted values,
+# non-target class, and a decision boundary
+# returns dataframe of fairness metrics
 # --
 calc_fairness_metrics <- function(protected_class, observed, pred_class, no_class) {
   class_levels <- unique(protected_class)
