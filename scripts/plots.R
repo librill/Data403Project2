@@ -50,9 +50,11 @@ ggplot(plot_df, aes(x = predictor, y = prop, fill = TARGET)) +
   theme_minimal()
 
 # --
-# ...
+# plot default rate by number of children
 # --
 
+df <- df %>%
+  mutate(TARGET = as.numeric(as.character(TARGET)))
 plot_children <- df |>
   group_by(CNT_CHILDREN) |>
   summarise(default_rate = mean(TARGET)) |>
@@ -67,10 +69,12 @@ plot_children <- df |>
 plot_children
 
 # --
-# ..
+# plot default rate by education level (higher, secondary, other)
 # --
 
-plot_education <- credit |>
+df <- df %>%
+  mutate(TARGET = as.numeric(as.character(TARGET)))
+plot_education <- df |>
   mutate(
     Education = factor(case_when(
       EDUCATION_TYPE_HIGHER == 1 ~ "Higher",
