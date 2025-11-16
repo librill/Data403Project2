@@ -1,0 +1,410 @@
+---
+title: "Logistic Classifier"
+output: html_document
+date: "2025-11-16"
+---
+
+**Fit and Evaluate Logistic Classifier on Training Set**
+
+```{r, include=FALSE}
+source(here::here("libraries.R"))
+source(here::here("data_cleaning.R"))
+source(here::here("functions.R"))
+source(here::here("splits.R"))
+```
+
+```{r}
+# define model (used for all)
+logit_mod <- logistic_reg() |>
+  set_mode("classification") |>
+  set_engine("glm")
+```
+
+## Random Split, No Undersampling
+
+```{r}
+# create train/val/test splits
+splits <- random_split(df, train_prop = 0.6, val_prop = 0.2, seed = 123)
+train_random <- splits$train
+val_random <- splits$validation
+test_random <- splits$test
+```
+
+```{r}
+# NOTE: removing predictors that are either ID itself or collinear with other
+# predictors 
+lg_rec <- recipe(TARGET ~ ., data = train_random) |>
+  step_rm(SK_ID_CURR, INCOME_TO_CREDIT, CREDIT_TO_NUM_CREDITS, INCOME_TO_REGION,
+          CODE_GENDER, AGE_GROUPS) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_naomit(all_predictors()) |>
+  step_dummy(all_nominal_predictors()) 
+               
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ FAMILY_STATUS_MARRIED + HOUSING_TYPE_PARENTS + 
+                   HOUSING_TYPE_OWN + AMT_INCOME_TOTAL, data = train_random) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+Seems that model is not able to accurately predict when TARGET = 1 (precision
+simply reflect proportion of TARGET), so undersampling may help resolve that issue. 
+
+## Random Split, 50/50 Undersampling
+
+```{r}
+# undersample
+df_fifty <- undersample_split(df, 0.5)
+
+# then, create sets
+splits <- random_split(df_fifty, train_prop = 0.7, val_prop = 0.1, seed = 123)
+train_random_fifty <- splits$train
+val_random_fifty <- splits$validation
+test_random_fifty <- splits$test
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ ., data = train_random_fifty) |>
+  step_rm(SK_ID_CURR, INCOME_TO_CREDIT, CREDIT_TO_NUM_CREDITS, INCOME_TO_REGION,
+          CODE_GENDER, AGE_GROUPS) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING + AMT_CREDIT + AMT_INCOME_TOTAL + HOUSING_TYPE_OWN, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_naomit(all_predictors()) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_naomit(all_predictors()) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ CNT_CHILDREN, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_naomit(all_predictors()) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ AMT_CREDIT + AMT_ANNUITY + AMT_INCOME_TOTAL, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_naomit(all_predictors()) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ FLAG_OWN_CAR + FLAG_OWN_REALTY, data = train_random_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_naomit(all_predictors()) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_random_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+Undersampling improves model performance, but random splits do not guarantee
+consistent representation across training, validation, and test sets. Let us
+try stratified split instead. 
+
+## Stratified Split, 50/50 Undersampling
+```{r}
+# create splits
+strat_splits_fifty <- strat_split(df_fifty, "TARGET", train_prop = 0.6, val_prop = 0.2, seed = 123)
+train_strat_fifty <- strat_splits_fifty$train
+val_strat_fifty <- strat_splits_fifty$val
+test_strat_fifty <- strat_splits_fifty$test
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
+  step_rm(SK_ID_CURR, INCOME_TO_CREDIT, CREDIT_TO_NUM_CREDITS, INCOME_TO_REGION,
+          CODE_GENDER, AGE_GROUPS) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_strat_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ INCOME_TO_CREDIT + CREDIT_TO_NUM_CREDITS + 
+                   INCOME_TO_REGION, data = train_strat_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_strat_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ EDUCATION_TYPE_SECONDARY + EDUCATION_TYPE_HIGHER + 
+                   AMT_INCOME_TOTAL + AMT_CREDIT, data = train_strat_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_strat_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ AMT_INCOME_TOTAL + REGION_POPULATION_RELATIVE,
+                 data = train_strat_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_strat_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+**NOTE: this is the logistic model that performed the best on the stratified, 
+undersampled training set**
+
+(since precision satisficing is 0.6)
+
+```{r}
+lg_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
+  step_rm("SK_ID_CURR") |>
+  step_rm("AMT_INCOME_TOTAL") |> 
+  step_rm("REGION_POPULATION_RELATIVE") |>
+  step_rm("INCOME_TO_CREDIT") |>
+  step_rm("CNT_CHILDREN") |>
+  step_rm("CONTRACT_TYPE_REVOLVING") |>
+  step_rm("INCOME_CLASS_FOURTH") |>
+  step_rm("INCOME_CLASS_THIRD") |>
+  step_rm("INCOME_CLASS_SECOND") |>
+  step_rm("CODE_GENDER") |>
+  step_rm("AGE_GROUPS") |>
+  step_mutate(TARGET = factor(TARGET, levels=c(0, 1))) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_strat_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
+  step_rm("SK_ID_CURR") |>
+  step_rm("AMT_INCOME_TOTAL") |> 
+  step_rm("REGION_POPULATION_RELATIVE") |>
+  step_rm("INCOME_TO_CREDIT") |>
+  step_rm("CNT_CHILDREN") |>
+  step_rm("CONTRACT_TYPE_REVOLVING") |>
+  step_rm("FAMILY_STATUS_MARRIED") |>
+  step_rm("FAMILY_STATUS_SINGLE") |>
+  step_rm("HOUSING_TYPE_OWN") |>
+  step_rm("HOUSING_TYPE_PARENTS") |>
+  step_rm("CODE_GENDER") |>
+  step_rm("AGE_GROUPS") |>
+  step_rm("DAYS_EMPLOYED") |>
+  step_mutate(TARGET = factor(TARGET, levels=c(0, 1))) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_strat_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
+  step_rm("SK_ID_CURR") |>
+  step_rm("AMT_INCOME_TOTAL") |> 
+  step_rm("CONTRACT_TYPE_REVOLVING") |>
+  step_rm("FLAG_OWN_CAR") |>
+  step_rm("FLAG_OWN_REALTY") |>
+  step_rm("INCOME_CLASS_FOURTH") |>
+  step_rm("INCOME_CLASS_THIRD") |>
+  step_rm("INCOME_CLASS_SECOND") |>
+  step_rm("CODE_GENDER") |>
+  step_rm("AGE_GROUPS") |>
+  step_rm("DAYS_EMPLOYED") |>
+  step_mutate(TARGET = factor(TARGET, levels=c(0, 1))) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_strat_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+## With Penalty
+
+```{r}
+# define model with penalty, or something
+logit_mod_pen_1 <- logistic_reg(penalty = 1, mixture=1) |>
+  set_mode("classification") |>
+  set_engine("glmnet")
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
+  step_rm("SK_ID_CURR") |>
+  step_rm("AMT_INCOME_TOTAL") |> 
+  step_rm("CONTRACT_TYPE_REVOLVING") |>
+  step_rm("FLAG_OWN_CAR") |>
+  step_rm("FLAG_OWN_REALTY") |>
+  step_rm("INCOME_CLASS_FOURTH") |>
+  step_rm("INCOME_CLASS_THIRD") |>
+  step_rm("INCOME_CLASS_SECOND") |>
+  step_rm("CODE_GENDER") |>
+  step_rm("AGE_GROUPS") |>
+  step_rm("DAYS_EMPLOYED") |>
+  step_mutate(TARGET = factor(TARGET, levels=c(0, 1))) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod_pen_1) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_strat_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+# define model with penalty, or something
+logit_mod_pen_2 <- logistic_reg(penalty=0, mixture=1) |>
+  set_mode("classification") |>
+  set_engine("glmnet")
+```
+
+
+```{r}
+lg_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
+  step_rm("SK_ID_CURR") |>
+  step_rm("AMT_INCOME_TOTAL") |> 
+  step_rm("CONTRACT_TYPE_REVOLVING") |>
+  step_rm("FLAG_OWN_CAR") |>
+  step_rm("FLAG_OWN_REALTY") |>
+  step_rm("INCOME_CLASS_FOURTH") |>
+  step_rm("INCOME_CLASS_THIRD") |>
+  step_rm("INCOME_CLASS_SECOND") |>
+  step_rm("CODE_GENDER") |>
+  step_rm("AGE_GROUPS") |>
+  step_rm("DAYS_EMPLOYED") |>
+  step_mutate(TARGET = factor(TARGET, levels=c(0, 1))) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod_pen_2) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_strat_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+
+```{r}
+# define model with penalty, or something
+logit_mod_pen_3 <- logistic_reg(penalty=.35, mixture=1) |>
+  set_mode("classification") |>
+  set_engine("glmnet")
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
+  step_rm("SK_ID_CURR") |>
+  step_rm("AMT_INCOME_TOTAL") |> 
+  step_rm("CONTRACT_TYPE_REVOLVING") |>
+  step_rm("FLAG_OWN_CAR") |>
+  step_rm("FLAG_OWN_REALTY") |>
+  step_rm("INCOME_CLASS_FOURTH") |>
+  step_rm("INCOME_CLASS_THIRD") |>
+  step_rm("INCOME_CLASS_SECOND") |>
+  step_rm("CODE_GENDER") |>
+  step_rm("AGE_GROUPS") |>
+  step_rm("DAYS_EMPLOYED") |>
+  step_mutate(TARGET = factor(TARGET, levels=c(0, 1))) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod_pen_3) |>
+  add_recipe(lg_rec)
+
+cross_validation(data = train_strat_fifty, model = "logistic", model_wkflow = logit_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
