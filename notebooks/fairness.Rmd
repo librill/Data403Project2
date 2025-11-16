@@ -1,0 +1,7 @@
+---
+title: "Fairness Evaluation"
+output: html_document
+date: "2025-11-16"
+---
+
+TODO: this is where we will perform fairness evaluation and whatnot

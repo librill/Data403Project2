@@ -1,0 +1,86 @@
+---
+title: "Model Selection"
+output: html_document
+date: "2025-11-16"
+---
+
+So basically, here I want to evaluate the performance of the best models on
+the validation set.
+
+Then, evaluate the final model on the test set.
+
+For now, I am just going to do the logistic model that we chose, but will
+incorporate SVC and LDA tomorrow. 
+
+## Validation Set
+
+### Logistic
+```{r}
+strat_splits <- strat_split(df, "TARGET", train_prop = 0.6, val_prop = 0.2, seed = 123)
+# undersample the training, not the val and test
+train_strat <- undersample_split(splits$train, 0.5)
+val_strat <- splits$val
+test_strat <- splits$test
+```
+
+Best-performing logistic model:
+```{r}
+lg_rec <- recipe(TARGET ~ ., data = train_strat) |>
+  step_rm("SK_ID_CURR") |>
+  step_rm("AMT_INCOME_TOTAL") |> 
+  step_rm("REGION_POPULATION_RELATIVE") |>
+  step_rm("INCOME_TO_CREDIT") |>
+  step_rm("CNT_CHILDREN") |>
+  step_rm("CONTRACT_TYPE_REVOLVING") |>
+  step_rm("INCOME_CLASS_FOURTH") |>
+  step_rm("INCOME_CLASS_THIRD") |>
+  step_rm("INCOME_CLASS_SECOND") |>
+  step_rm("CODE_GENDER") |>
+  step_rm("AGE_GROUPS") |>
+  step_mutate(TARGET = factor(TARGET, levels=c(0, 1))) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+l_fit <- logit_wkflow |>
+  fit(train_strat) |>
+  extract_fit_parsnip()
+
+preds <- predict(l_fit, new_data = val_strat)$.pred_class
+
+val_strat |>
+  mutate(predictions = preds) |>
+  precision(truth = TARGET, estimate = predictions)
+
+val_strat |>
+  mutate(predictions = preds) |>
+  recall(truth = TARGET, estimate = predictions)
+```
+
+### LDA
+ 
+TODO ..
+
+### SVC
+
+TODO ...
+
+## Test Set
+
+```{r}
+l_fit <- logit_wkflow |>
+  fit(train_strat) |>
+  extract_fit_parsnip()
+
+preds <- predict(l_fit, new_data = test_strat)$.pred_class
+
+test_strat |>
+  mutate(predictions = preds) |>
+  precision(truth = TARGET, estimate = predictions)
+
+test_strat |>
+  mutate(predictions = preds) |>
+  recall(truth = TARGET, estimate = predictions)
+```
