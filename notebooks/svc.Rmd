@@ -57,21 +57,19 @@ svm_wkflow |>
 ```
 
 
-## Random Split, 50/50 Undersampling
+## Stratified Split, 50/50 Undersampling
 
 ```{r}
-df_fifty <- undersample_split(df, 0.5)
+splits <- strat_split(df, target="TARGET", train_prop = 0.6, val_prop = 0.2, seed = 123)
+train_strat_fifty <- undersample_split(splits$train)
+val_strat_fifty <- splits$validation
+test_strat_fifty <- splits$test
 
-splits <- random_split(df_fifty, train_prop = 0.6, val_prop = 0.2, seed = 123)
-train_random_fifty <- splits$train
-val_random_fifty <- splits$validation
-test_random_fifty <- splits$test
-
-train_random_fifty$TARGET <- ifelse(train_random$TARGET == 0, -1, 1)
+train_strat_fifty$TARGET <- ifelse(train_strat_fifty$TARGET == 0, -1, 1)
 ```
 
 ```{r}
-svc_reg <- recipe(TARGET ~ ., data = train_random) |>
+svc_reg <- recipe(TARGET ~ ., data = train_strat_fifty) |>
   step_mutate(TARGET = factor(TARGET, levels = c(1, -1))) |>
   step_rm(SK_ID_CURR, INCOME_TO_CREDIT, CREDIT_TO_NUM_CREDITS, INCOME_TO_REGION,
         CODE_GENDER, AGE_GROUPS) |>
@@ -83,14 +81,14 @@ svm_wkflow <- workflow() |>
   add_recipe(svc_reg)
 
 set.seed(18938)
-cvs <- vfold_cv(train_random, v = 5)
+cvs <- vfold_cv(train_strat_fifty, v = 5)
 svm_wkflow |>
   fit_resamples(resamples = cvs, metrics = metric_set(accuracy, f_meas, precision, recall)) |>
   collect_metrics()
 ```
 
 ```{r}
-svc_reg <- recipe(TARGET ~ AMT_CREDIT + AMT_ANNUITY + AMT_INCOME_TOTAL, data = train_random_fifty) |>
+svc_reg <- recipe(TARGET ~ AMT_CREDIT + AMT_ANNUITY + AMT_INCOME_TOTAL, data = train_strat_fifty) |>
   step_mutate(TARGET = factor(TARGET, levels = c(1, -1))) |>
   step_naomit(all_predictors()) |>
   step_dummy(all_nominal_predictors())
@@ -100,14 +98,14 @@ svm_wkflow <- workflow() |>
   add_recipe(svc_reg)
 
 set.seed(18938)
-cvs <- vfold_cv(train_random, v = 5)
+cvs <- vfold_cv(train_strat_fifty, v = 5)
 svm_wkflow |>
   fit_resamples(resamples = cvs, metrics = metric_set(accuracy, f_meas, precision, recall)) |>
   collect_metrics()
 ```
 
 ```{r}
-svc_reg <- recipe(TARGET ~ CNT_CHILDREN, data = train_random_fifty) |>
+svc_reg <- recipe(TARGET ~ CNT_CHILDREN, data = train_strat_fifty) |>
   step_mutate(TARGET = factor(TARGET, levels = c(1, -1))) |>
   step_naomit(all_predictors()) |>
   step_dummy(all_nominal_predictors())
@@ -117,13 +115,11 @@ svm_wkflow <- workflow() |>
   add_recipe(svc_reg)
 
 set.seed(18938)
-cvs <- vfold_cv(train_random, v = 5)
+cvs <- vfold_cv(train_strat_fifty, v = 5)
 svm_wkflow |>
   fit_resamples(resamples = cvs, metrics = metric_set(accuracy, f_meas, precision, recall)) |>
   collect_metrics()
 ```
-
-## Stratified Split, 50/50 Undersampling
 
 ```{r}
 svc_reg <- recipe(TARGET ~ ., data = train_strat_fifty) |>
@@ -146,14 +142,14 @@ svm_wkflow <- workflow() |>
   add_recipe(svc_reg)
 
 set.seed(18938)
-cvs <- vfold_cv(train_random, v = 5)
+cvs <- vfold_cv(train_strat_fifty, v = 5)
 svm_wkflow |>
   fit_resamples(resamples = cvs, metrics = metric_set(accuracy, f_meas, precision, recall)) |>
   collect_metrics()
 ```
 
 ```{r}
-svc_reg <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING + AMT_CREDIT + AMT_INCOME_TOTAL + HOUSING_TYPE_OWN, data = train_random_fifty) |>
+svc_reg <- recipe(TARGET ~ CONTRACT_TYPE_REVOLVING + AMT_CREDIT + AMT_INCOME_TOTAL + HOUSING_TYPE_OWN, data = train_strat_fifty) |>
   step_mutate(TARGET = factor(TARGET, levels = c(1, -1))) |>
   step_naomit(all_predictors()) |>
   step_dummy(all_nominal_predictors())
@@ -163,7 +159,7 @@ svm_wkflow <- workflow() |>
   add_recipe(svc_reg)
 
 set.seed(18938)
-cvs <- vfold_cv(train_random, v = 5)
+cvs <- vfold_cv(train_strat_fifty, v = 5)
 svm_wkflow |>
   fit_resamples(resamples = cvs, metrics = metric_set(accuracy, f_meas, precision, recall)) |>
   collect_metrics()
@@ -190,7 +186,7 @@ svm_wkflow <- workflow() |>
   add_recipe(svc_reg)
 
 set.seed(18938)
-cvs <- vfold_cv(train_random, v = 5)
+cvs <- vfold_cv(train_strat_fifty, v = 5)
 svm_wkflow |>
   fit_resamples(resamples = cvs, metrics = metric_set(accuracy, f_meas, precision, recall)) |>
   collect_metrics()
@@ -219,7 +215,7 @@ svm_wkflow <- workflow() |>
   add_recipe(svc_reg)
 
 set.seed(18938)
-cvs <- vfold_cv(train_random, v = 5)
+cvs <- vfold_cv(train_strat_fifty, v = 5)
 svm_wkflow |>
   fit_resamples(resamples = cvs, metrics = metric_set(accuracy, f_meas, precision, recall)) |>
   collect_metrics()

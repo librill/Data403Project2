@@ -68,12 +68,9 @@ simply reflect proportion of TARGET), so undersampling may help resolve that iss
 ## Random Split, 50/50 Undersampling
 
 ```{r}
-# undersample
-df_fifty <- undersample_split(df, 0.5)
-
 # then, create sets
-splits <- random_split(df_fifty, train_prop = 0.7, val_prop = 0.1, seed = 123)
-train_random_fifty <- splits$train
+splits <- random_split(df, train_prop = 0.6, val_prop = 0.2, seed = 123)
+train_random_fifty <- undersample_split(splits$train)
 val_random_fifty <- splits$validation
 test_random_fifty <- splits$test
 ```
@@ -170,16 +167,16 @@ try stratified split instead.
 ## Stratified Split, 50/50 Undersampling
 ```{r}
 # create splits
-strat_splits_fifty <- strat_split(df_fifty, "TARGET", train_prop = 0.6, val_prop = 0.2, seed = 123)
-train_strat_fifty <- strat_splits_fifty$train
-val_strat_fifty <- strat_splits_fifty$val
-test_strat_fifty <- strat_splits_fifty$test
+strat_splits <- strat_split(df, "TARGET", train_prop = 0.6, val_prop = 0.2, seed = 123)
+train_strat_fifty <- undersample_split(strat_splits$train)
+val_strat_fifty <- strat_splits$val
+test_strat_fifty <- strat_splits$test
 ```
 
 ```{r}
 lg_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
   step_rm(SK_ID_CURR, INCOME_TO_CREDIT, CREDIT_TO_NUM_CREDITS, INCOME_TO_REGION,
-          CODE_GENDER, AGE_GROUPS) |>
+          CODE_GENDER, AGE_GROUPS, DAYS_EMPLOYED) |>
   step_mutate(TARGET = factor(TARGET)) |>
   step_dummy(all_nominal_predictors())
 
