@@ -1,9 +1,3 @@
----
-editor_options: 
-  markdown: 
-    wrap: 72
----
-
 ## Home Credit Default Risk Classification
 
 The goal of this project is to predict whether an applicant will be able
