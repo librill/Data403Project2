@@ -1,8 +1,6 @@
 ## Home Credit Default Risk Classification
 
-The goal of this project is to predict whether an applicant will be able
-to pay back their loan. The data is provided by [this Kaggle
-competition](https://www.kaggle.com/c/home-credit-default-risk/).
+The goal of this project is to predict whether an applicant will be able to pay back their loan. The data is provided by [this Kaggle competition](https://www.kaggle.com/c/home-credit-default-risk/).
 
 We use the following types of classification: Logistic, LDA, and SVC.
 
@@ -14,11 +12,9 @@ Our process is as follows:
 
 -   Fit and evaluate a bunch of models on training data.
 
--   Take the model of each type (Logistic, LDA, and SVC) that performed
-    best on training and evaluate on validation data.
+-   Take the model of each type (Logistic, LDA, and SVC) that performed best on training and evaluate on validation data.
 
--   Take the model that performed best on validation data and report
-    metrics as it performs on test set.
+-   Take the model that performed best on validation data and report metrics as it performs on test set.
 
 The code organization is as follows:
 
@@ -42,9 +38,6 @@ The code organization is as follows:
 
 -   svc.Rmd is fitting/evaluation of SVC on training data
 
-TODO: there will be another file that shows performance on validation
-set
+-   TODO: selection.Rmd is evaluation of models on validation and testing sets
 
-TODO: there will be another file that shows performance on test set
-
-(still trying to figure out best way to organize this)
+-   TODO: fairness.Rmd is evaluation of model on fairness
