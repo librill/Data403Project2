@@ -103,7 +103,6 @@ the_merged <- left_join(credit, bureau_grouped, by="SK_ID_CURR") %>%
     NUM_CREDITS = if_else(is.na(NUM_CREDITS), 0, NUM_CREDITS),
     MEAN_DAYS_CREDIT = if_else(is.na(MEAN_DAYS_CREDIT), 0, MEAN_DAYS_CREDIT),
     INCOME_TO_CREDIT = round(credit$AMT_INCOME_TOTAL / credit$AMT_CREDIT, 2),
-    CREDIT_TO_NUM_CREDITS = round(NUM_CREDITS / credit$AMT_CREDIT, 2), 
     INCOME_TO_REGION = round(credit$AMT_INCOME_TOTAL / credit$REGION_POPULATION_RELATIVE, 2)
   )
 

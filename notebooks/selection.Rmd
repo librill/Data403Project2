@@ -147,11 +147,6 @@ Model is not fair with regard to age groups because DAYS_EMPLOYED is used as
 predictor, so we will remove and evaluate model performance.
 
 ```{r}
-# need to convert TARGET back
-train_strat$TARGET <- ifelse(train_strat$TARGET == -1, 0, 1)
-```
-
-```{r}
 lg_rec <- recipe(TARGET ~ ., data = train_strat) |>
   step_rm("SK_ID_CURR") |>
   step_rm("AMT_INCOME_TOTAL") |> 

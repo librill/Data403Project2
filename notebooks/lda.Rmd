@@ -34,7 +34,7 @@ test_random <- splits$test
 
 ```{r}
 lda_rec <- recipe(TARGET ~ ., data = train_random) |>
-  step_rm(SK_ID_CURR, INCOME_TO_CREDIT, CREDIT_TO_NUM_CREDITS, INCOME_TO_REGION,
+  step_rm(SK_ID_CURR, INCOME_TO_CREDIT, INCOME_TO_REGION,
           CODE_GENDER, AGE_GROUPS) |>
   step_mutate(TARGET = factor(TARGET)) |>
   step_zv(all_predictors())
@@ -74,9 +74,6 @@ test_strat_fifty <- splits$test
 
 ## Stratified Split, 50/50 Undersampling
 
-```{r}
-colnames(df)
-```
 
 **NOTE: this is the lda model that performed the best on the stratified, 
 undersampled training set**

@@ -34,7 +34,7 @@ test_random <- splits$test
 # NOTE: removing predictors that are either ID itself or collinear with other
 # predictors 
 lg_rec <- recipe(TARGET ~ ., data = train_random) |>
-  step_rm(SK_ID_CURR, INCOME_TO_CREDIT, CREDIT_TO_NUM_CREDITS, INCOME_TO_REGION,
+  step_rm(SK_ID_CURR, INCOME_TO_CREDIT, INCOME_TO_REGION,
           CODE_GENDER, AGE_GROUPS) |>
   step_mutate(TARGET = factor(TARGET)) |>
   step_naomit(all_predictors()) |>
@@ -77,7 +77,7 @@ test_random_fifty <- splits$test
 
 ```{r}
 lg_rec <- recipe(TARGET ~ ., data = train_random_fifty) |>
-  step_rm(SK_ID_CURR, INCOME_TO_CREDIT, CREDIT_TO_NUM_CREDITS, INCOME_TO_REGION,
+  step_rm(SK_ID_CURR, INCOME_TO_CREDIT, INCOME_TO_REGION,
           CODE_GENDER, AGE_GROUPS) |>
   step_mutate(TARGET = factor(TARGET)) |>
   step_dummy(all_nominal_predictors())
@@ -175,7 +175,7 @@ test_strat_fifty <- strat_splits$test
 
 ```{r}
 lg_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
-  step_rm(SK_ID_CURR, INCOME_TO_CREDIT, CREDIT_TO_NUM_CREDITS, INCOME_TO_REGION,
+  step_rm(SK_ID_CURR, INCOME_TO_CREDIT, INCOME_TO_REGION,
           CODE_GENDER, AGE_GROUPS, DAYS_EMPLOYED) |>
   step_mutate(TARGET = factor(TARGET)) |>
   step_dummy(all_nominal_predictors())
@@ -189,8 +189,8 @@ cross_validation(data = train_strat_fifty, model = "logistic", model_wkflow = lo
 ```
 
 ```{r}
-lg_rec <- recipe(TARGET ~ INCOME_TO_CREDIT + CREDIT_TO_NUM_CREDITS + 
-                   INCOME_TO_REGION, data = train_strat_fifty) |>
+lg_rec <- recipe(TARGET ~ INCOME_TO_CREDIT + INCOME_TO_REGION, 
+                 data = train_strat_fifty) |>
   step_mutate(TARGET = factor(TARGET)) |>
   step_dummy(all_nominal_predictors())
 
