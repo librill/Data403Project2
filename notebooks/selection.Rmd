@@ -7,11 +7,14 @@ date: "2025-11-16"
 Now that we have evaluated a bunch of models on the training data, it is time
 to analyze the performance of the best models on the validation and test sets. 
 
-We will take the model of each type that performed best on the training set and 
-evaluate performance on the validation set. 
+We have taken the model of each type that performed best on the training set and 
+evaluated performance on the validation set. 
 
-The model that performs best on the validation set will be our chosen model, 
+The model that performs best on the validation set is our chosen model, 
 with metrics reported based on test set performance.
+
+NOTE that no SVC model met our satisficing metric (precision >= 0.6), so we do 
+not evaluate its performance on the validation set.
 
 ```{r, include=FALSE}
 source(here::here("scripts/libraries.R"))
@@ -115,61 +118,8 @@ val_strat |>
   recall(truth = TARGET, estimate = predictions)
 ```
 
-### SVC
-
-```{r}
-# mutate target, c(1, -1) [because the target should come first]
-train_strat$TARGET <- ifelse(train_strat$TARGET == 0, -1, 1)
-val_strat$TARGET <- ifelse(val_strat$TARGET == 0, -1, 1)
-val_strat <- val_strat %>%
-  mutate(TARGET = factor(TARGET, levels = c(1, -1)))
-```
-
-```{r}
-# define model (used for all)
-svm_mod <- svm_linear() |>
-  set_mode("classification") |>
-  set_engine("LiblineaR")
-```
-
-```{r}
-svc_reg <- recipe(TARGET ~ ., data = train_strat) |>
-  step_rm("SK_ID_CURR") |>
-  step_rm("AMT_INCOME_TOTAL") |> 
-  step_rm("CONTRACT_TYPE_REVOLVING") |>
-  step_rm("FLAG_OWN_CAR") |>
-  step_rm("FLAG_OWN_REALTY") |>
-  step_rm("INCOME_CLASS_FOURTH") |>
-  step_rm("INCOME_CLASS_THIRD") |>
-  step_rm("INCOME_CLASS_SECOND") |>
-  step_rm("CODE_GENDER") |>
-  step_rm("AGE_GROUPS") |>
-  step_rm("DAYS_EMPLOYED") |>
-  step_mutate(TARGET = factor(TARGET, levels = c(1, -1))) |>
-  step_dummy(all_nominal_predictors()) |>
-  step_zv(all_predictors())
-
-svm_wkflow <- workflow() |>
-  add_model(svm_mod) |>
-  add_recipe(svc_reg)
-
-svm_fit <- svm_wkflow |>
-  fit(train_strat) |>
-  extract_fit_parsnip()
-
-preds <- predict(svm_fit, new_data = val_strat)$.pred_class
-
-val_strat |>
-  mutate(predictions = preds) |>
-  precision(truth = TARGET, estimate = predictions)
-
-val_strat |>
-  mutate(predictions = preds) |>
-  recall(truth = TARGET, estimate = predictions)
-```
-
-Logistic Model had the highest recall, so we will choose that model. 
-We will evaluate on test set for performance metrics.
+Logistic Model has the highest recall, so we choose that model. 
+We will now evaluate on test set for performance metrics.
 
 ## Test Set
 

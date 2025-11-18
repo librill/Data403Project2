@@ -23,6 +23,13 @@ test_strat <- strat_splits$test
 ```
 
 ```{r}
+# define model
+logit_mod <- logistic_reg() |>
+  set_mode("classification") |>
+  set_engine("glm")
+```
+
+```{r}
 lg_rec <- recipe(TARGET ~ ., data = train_strat) |>
   step_rm("SK_ID_CURR") |>
   step_rm("AMT_INCOME_TOTAL") |> 
@@ -62,7 +69,23 @@ head(eyeball)
 
 James errors:
 ```{r}
-eyeball[c(1:50, 51:100), ]
+james_df <- eyeball[c(1:50, 51:100), ]
+head(james_df)
+```
+
+```{r}
+# write df to csv
+write.csv(james_df, "eyeball.csv", row.names=FALSE)
+```
+
+```{r}
+# -- 
+# read back edited csv, stored in root
+# --
+
+huh <- read.csv("../eyeball_james.csv")
+huh[is.na(huh)] <- 0
+head(huh)
 ```
 
 Daniel errors:
