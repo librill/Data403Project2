@@ -199,3 +199,10 @@ calc_fairness_metrics(test_strat$AGE_GROUPS, as.numeric(as.character(test_strat$
 
 Model is much more fair with respect to age group, while actually performing 
 slightly better with respect to gender as well. 
+
+## Coefficients
+
+```{r}
+tidy(logistic_fit)
+```
+
