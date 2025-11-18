@@ -2,7 +2,7 @@
 # plots
 # --
 
-source(here::here("functions.R"))
+source(here::here("scripts", "functions.R"))
 
 # --
 # bar plot separated by default & no default for some classes
