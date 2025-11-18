@@ -1,0 +1,287 @@
+---
+title: "LDA Classifier"
+output: html_document
+date: "2025-11-16"
+---
+
+**Fit and Evaluate LDA on Training Set**
+
+TODO: a lot of these are not working, so going to have to figure out why ...
+
+```{r, include=FALSE}
+source(here::here("scripts/libraries.R"))
+source(here::here("scripts/data_cleaning.R"))
+source(here::here("scripts/functions.R"))
+source(here::here("scripts/splits.R"))
+```
+
+```{r}
+# define model (used for all)
+lda_mod <- discrim_linear() |>
+  set_mode("classification") |>
+  set_engine("MASS")
+```
+
+### Random Split, No UnderSampling
+
+```{r}
+# create train/val/test splits
+splits <- random_split(df, train_prop = 0.6, val_prop = 0.2, seed = 123)
+train_random <- splits$train
+val_random <- splits$validation
+test_random <- splits$test
+```
+
+```{r}
+lda_rec <- recipe(TARGET ~ ., data = train_random) |>
+  step_rm(SK_ID_CURR, INCOME_TO_CREDIT, INCOME_TO_REGION,
+          CODE_GENDER, AGE_GROUPS) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_zv(all_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+cross_validation(data = train_random, model = "lda", model_wkflow = lda_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lda_rec <- recipe(TARGET ~ FAMILY_STATUS_MARRIED + HOUSING_TYPE_PARENTS + 
+                   HOUSING_TYPE_OWN + AMT_INCOME_TOTAL, data = train_random) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+cross_validation(data = train_random, model = "lda", model_wkflow = lda_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+Seems that model is not able to accurately predict when TARGET = 1 (precision
+simply reflect proportion of TARGET), so undersampling may help resolve that issue. 
+
+```{r}
+# then, create sets
+splits <- strat_split(df, target="TARGET", train_prop = 0.6, val_prop = 0.2, seed = 123)
+train_strat_fifty <- undersample_split(splits$train)
+val_strat_fifty <- splits$validation
+test_strat_fifty <- splits$test
+```
+
+## Stratified Split, 50/50 Undersampling
+
+
+**NOTE: this is the lda model that performed the best on the stratified, 
+undersampled training set**
+
+```{r}
+lda_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
+  step_rm(SK_ID_CURR, AMT_INCOME_TOTAL, AMT_CREDIT, NUM_CREDITS,
+          REGION_POPULATION_RELATIVE, CODE_GENDER, AGE_GROUPS, HOUSING_TYPE_OWN,
+          HOUSING_TYPE_PARENTS, FLAG_OWN_CAR) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors()) |>
+  step_zv(all_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+cross_validation(data = train_strat_fifty, model = "lda", model_wkflow = lda_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lda_rec <- recipe(TARGET ~ AMT_CREDIT + AMT_INCOME_TOTAL + HOUSING_TYPE_OWN + 
+                   INCOME_TO_REGION + AMT_GOODS_PRICE, data = train_strat_fifty) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_naomit(all_predictors()) |>
+  step_dummy(all_nominal_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+lda_wkflow
+cross_validation(data = train_strat_fifty, model = "lda", model_wkflow = lda_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lda_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
+  step_rm(SK_ID_CURR, AMT_INCOME_TOTAL, AMT_CREDIT, NUM_CREDITS,
+          REGION_POPULATION_RELATIVE, CODE_GENDER, AGE_GROUPS, FLAG_OWN_REALTY,
+          FLAG_OWN_CAR, EDUCATION_TYPE_SECONDARY, EDUCATION_TYPE_HIGHER) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors()) |>
+  step_zv(all_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+cross_validation(data = train_strat_fifty, model = "lda", model_wkflow = lda_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lda_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
+  step_rm(SK_ID_CURR, AMT_INCOME_TOTAL, AMT_CREDIT, NUM_CREDITS,
+          REGION_POPULATION_RELATIVE, CODE_GENDER, AGE_GROUPS, AMT_GOODS_PRICE, 
+          FAMILY_STATUS_SINGLE, FAMILY_STATUS_MARRIED) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors()) |>
+  step_zv(all_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+cross_validation(data = train_strat_fifty, model = "lda", model_wkflow = lda_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lda_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
+  step_rm(SK_ID_CURR, AMT_INCOME_TOTAL, AMT_CREDIT, NUM_CREDITS,
+          REGION_POPULATION_RELATIVE, CODE_GENDER, AGE_GROUPS, AMT_GOODS_PRICE, 
+          FAMILY_STATUS_SINGLE, FAMILY_STATUS_MARRIED) |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_dummy(all_nominal_predictors()) |>
+  step_zv(all_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+cross_validation(data = train_strat_fifty, model = "lda", model_wkflow = lda_wkflow,
+                 num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lda_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
+  step_rm("SK_ID_CURR") |>
+  step_rm("AMT_INCOME_TOTAL") |> 
+  step_rm("CONTRACT_TYPE_REVOLVING") |>
+  step_rm("FLAG_OWN_CAR") |>
+  step_rm("FLAG_OWN_REALTY") |>
+  step_rm("INCOME_CLASS_FOURTH") |>
+  step_rm("INCOME_CLASS_THIRD") |>
+  step_rm("INCOME_CLASS_SECOND") |>
+  step_rm("CODE_GENDER") |>
+  step_rm("AGE_GROUPS") |>
+  step_rm("DAYS_EMPLOYED") |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_naomit(all_predictors()) |>
+  step_dummy(all_nominal_predictors()) |>
+  step_zv(all_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+cross_validation(data = train_strat_fifty, model = "lda", model_wkflow = lda_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lda_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
+  step_rm("SK_ID_CURR") |>
+  step_rm("AMT_INCOME_TOTAL") |> 
+  step_rm("REGION_POPULATION_RELATIVE") |>
+  step_rm("INCOME_TO_CREDIT") |>
+  step_rm("CNT_CHILDREN") |>
+  step_rm("CONTRACT_TYPE_REVOLVING") |>
+  step_rm("FAMILY_STATUS_MARRIED") |>
+  step_rm("FAMILY_STATUS_SINGLE") |>
+  step_rm("HOUSING_TYPE_OWN") |>
+  step_rm("HOUSING_TYPE_PARENTS") |>
+  step_rm("CODE_GENDER") |>
+  step_rm("AGE_GROUPS") |>
+  step_rm("DAYS_EMPLOYED") |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_naomit(all_predictors()) |>
+  step_dummy(all_nominal_predictors()) |>
+  step_zv(all_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+cross_validation(data = train_strat_fifty, model = "logistic", model_wkflow = lda_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lda_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
+  step_rm("SK_ID_CURR") |>
+  step_rm("AMT_INCOME_TOTAL") |> 
+  step_rm("REGION_POPULATION_RELATIVE") |>
+  step_rm("INCOME_TO_CREDIT") |>
+  step_rm("CNT_CHILDREN") |>
+  step_rm("CONTRACT_TYPE_REVOLVING") |>
+  step_rm("INCOME_CLASS_FOURTH") |>
+  step_rm("INCOME_CLASS_THIRD") |>
+  step_rm("INCOME_CLASS_SECOND") |>
+  step_rm("CODE_GENDER") |>
+  step_rm("AGE_GROUPS") |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_naomit(all_predictors()) |>
+  step_dummy(all_nominal_predictors()) |>
+  step_zv(all_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+cross_validation(data = train_strat_fifty, model = "logistic", model_wkflow = lda_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lda_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
+  step_rm("SK_ID_CURR") |>
+  step_rm("AMT_INCOME_TOTAL") |> 
+  step_rm("AMT_CREDIT") |>
+  step_rm("REGION_POPULATION_RELATIVE") |>
+  step_rm("CODE_GENDER") |>
+  step_rm("AGE_GROUPS") |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_naomit(all_predictors()) |>
+  step_dummy(all_nominal_predictors()) |>
+  step_zv(all_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+cross_validation(data = train_strat_fifty, model = "logistic", model_wkflow = lda_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```
+
+```{r}
+lda_rec <- recipe(TARGET ~ ., data = train_strat_fifty) |>
+  step_rm("SK_ID_CURR") |>
+  step_rm("AMT_INCOME_TOTAL") |> 
+  step_rm("AMT_CREDIT") |>
+  step_rm("REGION_POPULATION_RELATIVE") |>
+  step_rm("DOCUMENTS_FLAGGED") |>
+  step_rm("CONTRACT_TYPE_REVOLVING") |>
+  step_rm("MEAN_DAYS_CREDIT") |>
+  step_rm("CODE_GENDER") |>
+  step_rm("AGE_GROUPS") |>
+  step_mutate(TARGET = factor(TARGET)) |>
+  step_naomit(all_predictors()) |>
+  step_dummy(all_nominal_predictors()) |>
+  step_zv(all_predictors())
+
+lda_wkflow <- workflow() |>
+  add_model(lda_mod) |>
+  add_recipe(lda_rec)
+
+cross_validation(data = train_strat_fifty, model = "logistic", model_wkflow = lda_wkflow,
+                           num_splits = 5, no_class = 0, bound = 0.5)
+```

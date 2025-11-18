@@ -1,0 +1,213 @@
+---
+title: "Fairness Evaluation"
+output: html_document
+date: "2025-11-16"
+---
+
+This is where each of us will conduct fairness evaluation for 401 .. "eyeball" 
+splits are provided at the bottom of the file
+
+```{r, include=FALSE}
+source(here::here("scripts/libraries.R"))
+source(here::here("scripts/data_cleaning.R"))
+source(here::here("scripts/functions.R"))
+source(here::here("scripts/splits.R"))
+```
+
+```{r}
+strat_splits <- strat_split(df, "TARGET", train_prop = 0.6, val_prop = 0.2, seed = 123)
+# undersample the training, not the val and test
+train_strat <- undersample_split(strat_splits$train, 0.5)
+val_strat <- strat_splits$val
+test_strat <- strat_splits$test
+```
+
+```{r}
+# define model
+logit_mod <- logistic_reg() |>
+  set_mode("classification") |>
+  set_engine("glm")
+```
+
+```{r}
+lg_rec <- recipe(TARGET ~ ., data = train_strat) |>
+  step_rm("SK_ID_CURR") |>
+  step_rm("AMT_INCOME_TOTAL") |> 
+  step_rm("REGION_POPULATION_RELATIVE") |>
+  step_rm("INCOME_TO_CREDIT") |>
+  step_rm("CNT_CHILDREN") |>
+  step_rm("CONTRACT_TYPE_REVOLVING") |>
+  step_rm("INCOME_CLASS_FOURTH") |>
+  step_rm("INCOME_CLASS_THIRD") |>
+  step_rm("INCOME_CLASS_SECOND") |>
+  step_rm("CODE_GENDER") |>
+  step_rm("AGE_GROUPS") |>
+  step_mutate(TARGET = factor(TARGET, levels=c(0, 1))) |>
+  step_dummy(all_nominal_predictors())
+
+logit_wkflow <- workflow() |>
+  add_model(logit_mod) |>
+  add_recipe(lg_rec)
+
+logistic_fit <- logit_wkflow |>
+  fit(train_strat) |>
+  extract_fit_parsnip()
+
+# make predictions
+preds <- predict(logistic_fit, new_data = val_strat)$.pred_class
+
+# bind to validation set
+val_strat$PREDICTION <- preds
+
+# find error
+errors_df <- val_strat %>%
+  filter(TARGET != PREDICTION)
+
+eyeball <- errors_df[1:150,]
+head(eyeball)
+```
+
+James errors:
+```{r}
+james_df <- eyeball[c(1:50, 51:100), ]
+head(james_df)
+```
+
+```{r}
+# write df to csv
+write.csv(james_df, "eyeball.csv", row.names=FALSE)
+```
+
+```{r}
+# -- 
+# read back edited csv, stored in root
+# --
+
+huh <- read.csv("../eyeball_james.csv")
+huh[is.na(huh)] <- 0
+head(huh)
+```
+
+Daniel errors:
+
+```{r}
+eyeball[c(51:100, 101:150), ]
+```
+
+Libby errors:
+
+```{r}
+eyeball[c(1:50, 101:150), ]
+```
+
+Then, using the errors in some way: do we do this manually
+```{r}
+getwd()
+# read in the three
+libby <- read.csv("../libby_errors.csv")
+libby[is.na(libby)] <- 0
+write.csv(libby, "../libby_error_2.csv")
+
+daniel <- read.csv("../daniel_error_analysis.csv")
+daniel[is.na(daniel)] <- 0
+write.csv(daniel, "../daniel_error_2.csv")
+
+james <- read.csv("../james_errors.csv")
+james[is.na(james)] <- 0
+write.csv(james, "../james_error_2.csv")
+
+
+head(libby)
+head(daniel)
+head(james)
+```
+
+```{r}
+colnames(libby)
+```
+
+```{r}
+
+libby <- read.csv("../libby_error.csv")
+daniel <- read.csv("../daniel_error.csv")
+james <- read.csv("../james_error.csv")
+
+
+libby$AGE_GROUPS <- if_else(libby$AGE_GROUPS == "55", "55+", libby$AGE_GROUPS)
+james$AGE_GROUPS <- if_else(james$AGE_GROUPS == "55", "55+", james$AGE_GROUPS)
+daniel$AGE_GROUPS <- if_else(daniel$AGE_GROUPS == "55", "55+", daniel$AGE_GROUPS)
+
+l_and_j <- full_join(libby, james, by=c("SK_ID_CURR", "CONTRACT_TYPE_REVOLVING", 
+                                        "FLAG_OWN_CAR", "FLAG_OWN_REALTY", 
+                                        "CNT_CHILDREN", "AMT_INCOME_TOTAL", 
+                                        "AMT_CREDIT", "AMT_ANNUITY", 
+                                        "AMT_GOODS_PRICE", 
+                                        "EDUCATION_TYPE_SECONDARY", 
+                                        "EDUCATION_TYPE_HIGHER",
+                                        "FAMILY_STATUS_MARRIED", 
+                                        "FAMILY_STATUS_SINGLE", 
+                                        "HOUSING_TYPE_OWN", 
+                                        "HOUSING_TYPE_PARENTS", 
+                                        "DAYS_EMPLOYED",
+                                        "DOCUMENTS_FLAGGED", 
+                                        "INCOME_CLASS_FOURTH", 
+                                        "INCOME_CLASS_THIRD",
+                                        "INCOME_CLASS_SECOND", 
+                                        "REGION_POPULATION_RELATIVE",
+                                        "CODE_GENDER",
+                                        "AGE_GROUPS", 
+                                        "NUM_CREDITS", 
+                                        "MEAN_DAYS_CREDIT", 
+                                        "INCOME_TO_CREDIT", 
+                                        "CREDIT_TO_NUM_CREDITS", 
+                                        "INCOME_TO_REGION", 
+                                        "TARGET", "PREDICTION"))
+
+all <- full_join(daniel, l_and_j, by=c("SK_ID_CURR", "CONTRACT_TYPE_REVOLVING", 
+                                        "FLAG_OWN_CAR", "FLAG_OWN_REALTY", 
+                                        "CNT_CHILDREN", "AMT_INCOME_TOTAL", 
+                                        "AMT_CREDIT", "AMT_ANNUITY", 
+                                        "AMT_GOODS_PRICE", 
+                                        "EDUCATION_TYPE_SECONDARY", 
+                                        "EDUCATION_TYPE_HIGHER",
+                                        "FAMILY_STATUS_MARRIED", 
+                                        "FAMILY_STATUS_SINGLE", 
+                                        "HOUSING_TYPE_OWN", 
+                                        "HOUSING_TYPE_PARENTS", 
+                                        "DAYS_EMPLOYED",
+                                        "DOCUMENTS_FLAGGED", 
+                                        "INCOME_CLASS_FOURTH", 
+                                        "INCOME_CLASS_THIRD",
+                                        "INCOME_CLASS_SECOND", 
+                                        "REGION_POPULATION_RELATIVE",
+                                        "CODE_GENDER",
+                                        "AGE_GROUPS", 
+                                        "NUM_CREDITS", 
+                                        "MEAN_DAYS_CREDIT", 
+                                        "INCOME_TO_CREDIT", 
+                                        "CREDIT_TO_NUM_CREDITS", 
+                                        "INCOME_TO_REGION", 
+                                        "TARGET", "PREDICTION"))
+
+all |>
+  arrange(SK_ID_CURR)
+
+
+all <- all[!duplicated(all$SK_ID_CURR), ] 
+all[is.na(all)] <- 0
+all
+
+write.csv(all, "../all_error.csv")
+```
+
+```{r}
+cols_with_1 <- sapply(all, function(x) any(x == 1))
+all[, cols_with_1]
+
+```
+
+```{r}
+caret::confusionMatrix(data = eyeball$PREDICTION, reference = eyeball$TARGET,
+                       positive = "1")
+```
+
