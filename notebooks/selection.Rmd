@@ -198,6 +198,8 @@ slightly better with respect to gender as well.
 ## Coefficients
 
 ```{r}
-tidy(logistic_fit)
+logistic_fit |>
+  tidy() |>
+  select(term, estimate)
 ```
 
