@@ -205,3 +205,9 @@ cols_with_1 <- sapply(all, function(x) any(x == 1))
 all[, cols_with_1]
 
 ```
+
+```{r}
+caret::confusionMatrix(data = eyeball$PREDICTION, reference = eyeball$TARGET,
+                       positive = "1")
+```
+
